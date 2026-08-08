@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectKind {
+  TOP_LIST
+  CURIOSIDADE
+  AMBIENT
+}
+
+enum ProjectStatus {
+  DRAFT
+  QUEUED
+  PROCESSING
+  WAITING_PREVIEW_APPROVAL
+  READY
+  READY_FOR_REVIEW
+  FAILED
+}
+
+enum LicenseVerdict {
+  SAFE
+  ATTRIBUTION_REQUIRED
+  UNKNOWN
+  REJECTED
+}
+
+model Project {
+  id        String        @id @default(cuid())
+  title     String
+  watermark String?
+  status    ProjectStatus @default(DRAFT)
+  kind      ProjectKind   @default(TOP_LIST)
+
+  /// Tema informado pelo usuário (pipeline Curiosidade)
+  topic String?
+  /// Roteiro gerado pelo LLM (JSON)
+  scriptJson Json?
+  /// Key do WAV de narração no storage
+  voiceoverKey String?
+
+  /// 0-100, atualizado pelo worker durante o processamento
+  progress Int @default(0)
+  /// Etapa legível em andamento (ex: "Normalizando clipe 2/5")
+  stage String?
+  /// Mensagem de erro do último render que falhou
+  errorMessage String?
+
+  /// Key do MP4 final no storage
+  outputKey      String?
+  outputSizeByte Int?
+  renderedAt     DateTime?
+
+  /// --- Ambient / sons relaxantes ---
+  environment       String?
+  weather           String?
+  timeOfDay         String?
+  purpose           String?
+  durationMinutes   Int?
+  preset            String?
+  seed              Int?
+  conceptJson       Json?
+  ambientConfigJson Json?
+  audioTimelineJson Json?
+  visualTimelineJson Json?
+  qualityScore      Float?
+  qualityJson       Json?
+  previewKey        String?
+  metadataJson      Json?
+
+  clips               Clip[]
+  mediaAssets         MediaAsset[]
+  ambientProjectAssets AmbientProjectAsset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([kind])
+  @@index([status])
+}
+
+model Clip {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// Ordem de exibição, 0-based. O ranking mostrado é invertido (último = #1).
+  position     Int
+  originalName String
+  /// Texto de contexto opcional sobrepondo o clipe
+  label String?
+  /// Quando true, o worker transcreve o áudio e gera legendas no render
+  transcribe Boolean @default(false)
+  /// Saída Whisper (segments/words) para auditoria e re-render
+  transcriptJson Json?
+
+  sourceKey String
+  sizeByte  Int
+
+  /// Duração do arquivo original, em segundos (preenchida no upload via ffprobe)
+  sourceDurationSec Float?
+  /// Teto de duração aplicado na normalização
+  maxDurationSec Float @default(15)
+
+  /// Preenchidos pelo worker após a normalização
+  normalizedKey         String?
+  normalizedDurationSec Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, position])
+  @@index([projectId])
+}
+
+/// Asset de stock baixado para o pipeline Curiosidade / Ambient visual
+model MediaAsset {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider  String
+  sourceUrl String
+  author    String?
+  license   String?
+  query     String
+
+  localKey      String?
+  durationSec   Float?
+  width         Int?
+  height        Int?
+  /// Ordem na timeline (0-based)
+  position      Int      @default(0)
+  /// Trecho do roteiro associado
+  scriptStartSec Float?
+  scriptEndSec   Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+/// Biblioteca local de sons (módulo Ambient)
+model SoundAsset {
+  id           String  @id @default(cuid())
+  name         String
+  category     String
+  subcategory  String?
+  provider     String
+  sourceUrl    String?
+  localKey     String
+  durationSec  Float
+  sampleRate   Int?
+  channels     Int?
+  lufs         Float?
+  peak         Float?
+  license      String?
+  licenseUrl   String?
+  attribution  String?
+  commercialUse         Boolean @default(false)
+  modificationAllowed   Boolean @default(false)
+  attributionRequired   Boolean @default(false)
+  verified              Boolean @default(false)
+  licenseVerdict        LicenseVerdict @default(UNKNOWN)
+  tags         String[] @default([])
+  qualityScore Float    @default(0)
+  loopScore    Float    @default(0)
+
+  ambientUsages AmbientProjectAsset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([licenseVerdict])
+  @@index([createdAt])
+}
+
+/// Ligação entre projeto ambient e assets usados (som ou visual)
+model AmbientProjectAsset {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assetId   String?
+  soundAsset SoundAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  type      String
+  layer     String?
+  startTime Float   @default(0)
+  endTime   Float?
+  volume    Float   @default(1)
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([assetId])
+}
