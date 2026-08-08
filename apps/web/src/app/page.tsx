@@ -1,11 +1,17 @@
 import { prisma } from '@editor-video/db';
+import { auth } from '@/auth';
 import { NewProjectForm } from '@/components/NewProjectForm';
 import { KIND_LABEL, STATUS_LABEL } from '@/lib/dto';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+
   const projects = await prisma.project.findMany({
+    where: { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
     include: { _count: { select: { clips: true, mediaAssets: true } } },
   });

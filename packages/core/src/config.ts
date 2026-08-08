@@ -91,6 +91,22 @@ export const config = {
     height: num('AMBIENT_VIDEO_HEIGHT', 1080),
     fps: num('AMBIENT_VIDEO_FPS', 30),
     freesoundApiKey: str('FREESOUND_API_KEY', ''),
+    maxDurationMinutes: num('AMBIENT_MAX_DURATION_MIN', 600),
+    maxDownloadBytes: num('AMBIENT_MAX_DOWNLOAD_MB', 500) * 1024 * 1024,
+    sleepMinDurationMinutes: num('AMBIENT_SLEEP_MIN_DURATION_MIN', 60),
+    sleepMaxDurationMinutes: num('AMBIENT_SLEEP_MAX_DURATION_MIN', 600),
+    cozyFocusMaxDurationMinutes: num('AMBIENT_COZY_FOCUS_MAX_DURATION_MIN', 180),
+  },
+  auth: {
+    secret: str('AUTH_SECRET', str('NEXTAUTH_SECRET', '')),
+  },
+  youtube: {
+    clientId: str('GOOGLE_CLIENT_ID', ''),
+    clientSecret: str('GOOGLE_CLIENT_SECRET', ''),
+    redirectUri: str(
+      'YOUTUBE_REDIRECT_URI',
+      'http://localhost:3000/api/youtube/callback',
+    ),
   },
   tmpDir: path.resolve(repoRoot, 'tmp'),
 } as const;

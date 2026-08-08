@@ -140,6 +140,70 @@ const LAYER_SYNTH: Record<string, LayerSynth> = {
     pan: 0.35,
     noiseColor: 'pink',
   },
+  soft_foam: {
+    kind: 'soft_foam',
+    layerType: 'texture',
+    filter: 'highpass=f=300,lowpass=f=4000,tremolo=f=0.15:d=0.35,volume=0.45',
+    defaultVolume: 0.15,
+    pan: 0.1,
+    noiseColor: 'white',
+  },
+  crickets: {
+    kind: 'crickets',
+    layerType: 'texture',
+    filter: 'bandpass=f=3500:width_type=h:width=2200,tremolo=f=0.4:d=0.3,volume=0.4',
+    defaultVolume: 0.2,
+    pan: 0.2,
+    noiseColor: 'white',
+  },
+  leaves: {
+    kind: 'leaves',
+    layerType: 'texture',
+    filter: 'highpass=f=500,lowpass=f=5000,tremolo=f=0.18:d=0.45,volume=0.4',
+    defaultVolume: 0.15,
+    pan: -0.15,
+    noiseColor: 'pink',
+  },
+  owl: {
+    kind: 'owl',
+    layerType: 'event',
+    filter: 'bandpass=f=600:width_type=h:width=400,volume=0.45',
+    defaultVolume: 0.18,
+    pan: -0.3,
+    noiseColor: 'brown',
+  },
+  snow_wind: {
+    kind: 'snow_wind',
+    layerType: 'texture',
+    filter: 'lowpass=f=600,highpass=f=80,tremolo=f=0.11:d=0.5,volume=0.55',
+    defaultVolume: 0.2,
+    pan: 0.15,
+    noiseColor: 'pink',
+  },
+  train: {
+    kind: 'train',
+    layerType: 'base',
+    filter: 'lowpass=f=400,tremolo=f=0.35:d=0.55,volume=0.7',
+    defaultVolume: 0.45,
+    pan: 0,
+    noiseColor: 'brown',
+  },
+  train_horn: {
+    kind: 'train_horn',
+    layerType: 'event',
+    filter: 'bandpass=f=280:width_type=h:width=180,volume=0.5',
+    defaultVolume: 0.2,
+    pan: 0,
+    noiseColor: 'brown',
+  },
+  mountain_wind: {
+    kind: 'mountain_wind',
+    layerType: 'base',
+    filter: 'lowpass=f=500,highpass=f=40,tremolo=f=0.12:d=0.5,volume=0.65',
+    defaultVolume: 0.4,
+    pan: 0.1,
+    noiseColor: 'pink',
+  },
 };
 
 function intensitySegments(
@@ -203,12 +267,20 @@ const LIBRARY_CATEGORIES: Record<string, string[]> = {
   distant_thunder: ['thunder/distant', 'thunder/close'],
   forest: ['nature/forest'],
   ocean: ['ocean/waves'],
+  soft_foam: ['ocean/waves', 'ocean/foam'],
   room_ambience: ['room/ambience'],
   city_rain: ['city/rain'],
   brown_noise: ['noise/brown'],
   white_noise: ['noise/white'],
   pink_noise: ['noise/pink'],
   wood_crack: ['fire/wood', 'fire/fireplace'],
+  crickets: ['nature/crickets', 'nature/forest'],
+  leaves: ['nature/leaves', 'nature/forest'],
+  owl: ['nature/owl', 'nature/forest'],
+  snow_wind: ['wind/strong', 'wind/light'],
+  train: ['train/ambience', 'train/rhythm'],
+  train_horn: ['train/horn'],
+  mountain_wind: ['wind/strong', 'nature/mountain'],
 };
 
 async function findLibraryAsset(
@@ -231,11 +303,23 @@ async function findLibraryAsset(
   let candidates = await prisma.soundAsset.findMany({
     where: {
       ...baseWhere,
+      verified: true,
       ...(excludeIds.size > 0 ? { id: { notIn: [...excludeIds] } } : {}),
     },
     orderBy: [{ qualityScore: 'desc' }, { loopScore: 'desc' }],
     take: 16,
   });
+
+  if (candidates.length === 0) {
+    candidates = await prisma.soundAsset.findMany({
+      where: {
+        ...baseWhere,
+        ...(excludeIds.size > 0 ? { id: { notIn: [...excludeIds] } } : {}),
+      },
+      orderBy: [{ qualityScore: 'desc' }, { loopScore: 'desc' }],
+      take: 16,
+    });
+  }
 
   // Se excluiu demais (poucos assets), volta a considerar todos.
   if (candidates.length === 0) {
@@ -498,24 +582,30 @@ async function synthesizeEventClip(opts: {
   return { path: outPath, atSec: opts.event.atSec };
 }
 
-/** Mistura beds (loop contínuo) numa única trilha da duração alvo. */
+/** Mistura beds (loop contínuo). Preview curto em WAV; longo em chunks AAC. */
 async function mixBeds(opts: {
   bedPaths: string[];
   durationSec: number;
   workDir: string;
+  intensity?: number;
+  outputPath?: string;
+  codec: 'pcm' | 'aac';
 }): Promise<string> {
-  const outPath = path.join(opts.workDir, 'beds-mix.wav');
+  const outPath =
+    opts.outputPath ??
+    path.join(opts.workDir, opts.codec === 'aac' ? 'beds-mix.m4a' : 'beds-mix.wav');
   const inputs: string[] = [];
   for (const bed of opts.bedPaths) {
     inputs.push('-stream_loop', '-1', '-t', String(opts.durationSec), '-i', bed);
   }
 
   const fadeOut = Math.max(0, opts.durationSec - 3);
+  const intensity = opts.intensity ?? 1;
   const filterParts: string[] = [];
   const labels: string[] = [];
   for (let i = 0; i < opts.bedPaths.length; i++) {
     filterParts.push(
-      `[${i}:a]afade=t=in:st=0:d=2,afade=t=out:st=${fadeOut}:d=3[b${i}]`,
+      `[${i}:a]afade=t=in:st=0:d=2,afade=t=out:st=${fadeOut}:d=3,volume=${intensity.toFixed(3)}[b${i}]`,
     );
     labels.push(`[b${i}]`);
   }
@@ -524,6 +614,11 @@ async function mixBeds(opts: {
     opts.bedPaths.length === 1
       ? `${filterParts[0]};[b0]anull[mixed]`
       : `${filterParts.join(';')};${labels.join('')}amix=inputs=${labels.length}:duration=first:dropout_transition=2:normalize=0[mixed]`;
+
+  const codecArgs =
+    opts.codec === 'aac'
+      ? (['-c:a', 'aac', '-b:a', '256k'] as const)
+      : (['-c:a', 'pcm_s16le'] as const);
 
   await runFfmpeg('ffmpeg', [
     '-y',
@@ -538,29 +633,37 @@ async function mixBeds(opts: {
     '2',
     '-ar',
     '48000',
-    '-c:a',
-    'pcm_s16le',
+    ...codecArgs,
     outPath,
   ]);
 
   return outPath;
 }
 
-/** Soma eventos em lotes sobre a trilha base (todos os eventos entram no master). */
+/**
+ * Soma eventos em lotes. Para masters longos, trabalha em janelas AAC
+ * sem reescrever a trilha PCM completa várias vezes.
+ */
 async function mixEventsInBatches(opts: {
   basePath: string;
   eventClips: Array<{ path: string; atSec: number }>;
   durationSec: number;
   workDir: string;
+  codec: 'pcm' | 'aac';
 }): Promise<string> {
   if (opts.eventClips.length === 0) return opts.basePath;
 
   let current = opts.basePath;
   let batchIdx = 0;
+  const ext = opts.codec === 'aac' ? 'm4a' : 'wav';
+  const codecArgs =
+    opts.codec === 'aac'
+      ? (['-c:a', 'aac', '-b:a', '256k'] as const)
+      : (['-c:a', 'pcm_s16le'] as const);
 
   for (let offset = 0; offset < opts.eventClips.length; offset += EVENT_BATCH_SIZE) {
     const batch = opts.eventClips.slice(offset, offset + EVENT_BATCH_SIZE);
-    const outPath = path.join(opts.workDir, `mix-batch-${batchIdx}.wav`);
+    const outPath = path.join(opts.workDir, `mix-batch-${batchIdx}.${ext}`);
     const inputs = ['-i', current];
     for (const clip of batch) {
       inputs.push('-i', clip.path);
@@ -591,8 +694,7 @@ async function mixEventsInBatches(opts: {
       '2',
       '-ar',
       '48000',
-      '-c:a',
-      'pcm_s16le',
+      ...codecArgs,
       outPath,
     ]);
 
@@ -604,6 +706,101 @@ async function mixEventsInBatches(opts: {
   }
 
   return current;
+}
+
+const LONG_CHUNK_SEC = 600; // 10 min — evita WAV multi-GB
+
+function intensityAt(
+  segments: AmbientAudioTimeline['intensitySegments'],
+  startSec: number,
+  endSec: number,
+): number {
+  if (segments.length === 0) return 1;
+  let weighted = 0;
+  let covered = 0;
+  for (const seg of segments) {
+    const a = Math.max(startSec, seg.startSec);
+    const b = Math.min(endSec, seg.endSec);
+    if (b > a) {
+      weighted += seg.intensity * (b - a);
+      covered += b - a;
+    }
+  }
+  return covered > 0 ? weighted / covered : 1;
+}
+
+/** Render longo: chunks AAC independentes + concat (sem WAV full-duration). */
+async function mixLongSoundscape(opts: {
+  bedPaths: string[];
+  eventClips: Array<{ path: string; atSec: number }>;
+  durationSec: number;
+  workDir: string;
+  intensitySegments: AmbientAudioTimeline['intensitySegments'];
+}): Promise<string> {
+  const chunkPaths: string[] = [];
+  for (let start = 0; start < opts.durationSec; start += LONG_CHUNK_SEC) {
+    const len = Math.min(LONG_CHUNK_SEC, opts.durationSec - start);
+    const intensity = intensityAt(opts.intensitySegments, start, start + len);
+    const eventsInChunk = opts.eventClips
+      .filter((e) => e.atSec >= start && e.atSec < start + len)
+      .map((e) => ({ path: e.path, atSec: e.atSec - start }));
+
+    const bedsPath = await mixBeds({
+      bedPaths: opts.bedPaths,
+      durationSec: len,
+      workDir: opts.workDir,
+      intensity,
+      outputPath: path.join(opts.workDir, `chunk-beds-${start}.m4a`),
+      codec: 'aac',
+    });
+
+    const mixed = await mixEventsInBatches({
+      basePath: bedsPath,
+      eventClips: eventsInChunk,
+      durationSec: len,
+      workDir: opts.workDir,
+      codec: 'aac',
+    });
+
+    const chunkOut = path.join(opts.workDir, `chunk-${start}.m4a`);
+    if (mixed !== bedsPath) {
+      await fsp.rename(mixed, chunkOut).catch(async () => {
+        await fsp.copyFile(mixed, chunkOut);
+        await fsp.rm(mixed, { force: true });
+      });
+    } else {
+      await fsp.rename(bedsPath, chunkOut).catch(async () => {
+        await fsp.copyFile(bedsPath, chunkOut);
+      });
+    }
+    if (mixed !== bedsPath) {
+      await fsp.rm(bedsPath, { force: true }).catch(() => undefined);
+    }
+    chunkPaths.push(chunkOut);
+  }
+
+  const listPath = path.join(opts.workDir, 'chunks.txt');
+  await fsp.writeFile(
+    listPath,
+    chunkPaths.map((p) => `file '${p.replace(/\\/g, '/')}'`).join('\n'),
+    'utf8',
+  );
+
+  const concatPath = path.join(opts.workDir, 'audio-concat.m4a');
+  await runFfmpeg('ffmpeg', [
+    '-y',
+    '-f',
+    'concat',
+    '-safe',
+    '0',
+    '-i',
+    listPath,
+    '-c',
+    'copy',
+    concatPath,
+  ]);
+
+  return concatPath;
 }
 
 function masterFilter(profile: AmbientPurpose): string {
@@ -625,16 +822,30 @@ export async function buildSoundscape(opts: {
   seed: number;
   durationSec: number;
   workDir: string;
+  /** Volumes da variação Midnight (sobrescreve preset base). */
+  layerVolumes?: Record<string, number>;
+  /** Eventos da variação Midnight. */
+  eventDefs?: Array<{
+    type: string;
+    minInterval: number;
+    maxInterval: number;
+    probability: number;
+  }>;
 }): Promise<{ timeline: AmbientAudioTimeline; masterPath: string }> {
   const rng = createRng(opts.seed);
   const preset = getPreset(opts.presetId);
+  const volumes = { ...preset.layerVolumes, ...(opts.layerVolumes ?? {}) };
+  if (opts.eventDefs) {
+    preset.events = opts.eventDefs;
+  }
   const layers: AmbientAudioLayer[] = [];
   const bedPaths: string[] = [];
   const usedAssetIds = new Set<string>();
+  const segments = intensitySegments(opts.durationSec, rng);
 
   for (const [layerIndex, kind] of opts.concept.audioLayers.entries()) {
     const synth = LAYER_SYNTH[kind] ?? LAYER_SYNTH.rain!;
-    const volume = preset.layerVolumes[kind] ?? synth.defaultVolume;
+    const volume = volumes[kind] ?? synth.defaultVolume;
     const library = await findLibraryAsset(kind, rng, usedAssetIds);
     if (library) usedAssetIds.add(library.id);
 
@@ -698,28 +909,43 @@ export async function buildSoundscape(opts: {
     );
   }
 
-  const bedsMixPath = await mixBeds({
-    bedPaths,
-    durationSec: opts.durationSec,
-    workDir: opts.workDir,
-  });
-  const mixPath = await mixEventsInBatches({
-    basePath: bedsMixPath,
-    eventClips,
-    durationSec: opts.durationSec,
-    workDir: opts.workDir,
-  });
+  const isLong = opts.durationSec > 120;
+  let mixPath: string;
 
-  // Preview curto em WAV; masters longos em AAC para não estourar disco.
-  const masterPath =
-    opts.durationSec > 120
-      ? path.join(opts.workDir, 'audio-master.m4a')
-      : path.join(opts.workDir, 'audio-master.wav');
+  if (isLong) {
+    mixPath = await mixLongSoundscape({
+      bedPaths,
+      eventClips,
+      durationSec: opts.durationSec,
+      workDir: opts.workDir,
+      intensitySegments: segments,
+    });
+  } else {
+    const avgIntensity =
+      segments.reduce((s, seg) => s + seg.intensity, 0) / Math.max(1, segments.length);
+    const bedsMixPath = await mixBeds({
+      bedPaths,
+      durationSec: opts.durationSec,
+      workDir: opts.workDir,
+      intensity: avgIntensity,
+      codec: 'pcm',
+    });
+    mixPath = await mixEventsInBatches({
+      basePath: bedsMixPath,
+      eventClips,
+      durationSec: opts.durationSec,
+      workDir: opts.workDir,
+      codec: 'pcm',
+    });
+  }
 
-  const masterCodec =
-    opts.durationSec > 120
-      ? (['-c:a', 'aac', '-b:a', '256k'] as const)
-      : (['-c:a', 'pcm_s16le'] as const);
+  const masterPath = isLong
+    ? path.join(opts.workDir, 'audio-master.m4a')
+    : path.join(opts.workDir, 'audio-master.wav');
+
+  const masterCodec = isLong
+    ? (['-c:a', 'aac', '-b:a', '256k'] as const)
+    : (['-c:a', 'pcm_s16le'] as const);
 
   await runFfmpeg('ffmpeg', [
     '-y',
@@ -735,18 +961,16 @@ export async function buildSoundscape(opts: {
     masterPath,
   ]);
 
-  if (mixPath !== bedsMixPath) {
-    await fsp.rm(mixPath, { force: true }).catch(() => undefined);
-  }
-  await fsp.rm(bedsMixPath, { force: true }).catch(() => undefined);
+  await fsp.rm(mixPath, { force: true }).catch(() => undefined);
 
   const timeline: AmbientAudioTimeline = {
     seed: opts.seed,
     durationSec: opts.durationSec,
     layers,
     events,
-    intensitySegments: intensitySegments(opts.durationSec, rng),
+    intensitySegments: segments,
   };
 
   return { timeline, masterPath };
 }
+

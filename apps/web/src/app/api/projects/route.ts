@@ -1,12 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { prisma, ProjectKind } from '@editor-video/db';
+import { requireUser } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(): Promise<Response> {
   return handle(async () => {
+    const user = await requireUser();
     const projects = await prisma.project.findMany({
+      where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { clips: true } } },
     });
@@ -23,6 +26,7 @@ interface CreateBody {
 
 export async function POST(request: NextRequest): Promise<Response> {
   return handle(async () => {
+    const user = await requireUser();
     const body = (await request.json()) as CreateBody;
     const watermarkRaw = typeof body.watermark === 'string' ? body.watermark.trim() : '';
     const watermark = watermarkRaw === '' ? null : watermarkRaw;
@@ -48,6 +52,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           title,
           topic,
           watermark,
+          userId: user.id,
         },
       });
       return json({ project }, 201);
@@ -63,6 +68,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         kind: ProjectKind.TOP_LIST,
         title,
         watermark,
+        userId: user.id,
       },
     });
 

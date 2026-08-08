@@ -60,6 +60,7 @@ export type ProjectStatusValue =
   | 'WAITING_PREVIEW_APPROVAL'
   | 'READY'
   | 'READY_FOR_REVIEW'
+  | 'PUBLISHED'
   | 'FAILED';
 
 export type ProjectKindValue = 'TOP_LIST' | 'CURIOSIDADE' | 'AMBIENT';
@@ -78,6 +79,16 @@ export type AmbientConcept = {
   audioLayers: string[];
   visualQueries: string[];
   format?: 'youtube' | 'shorts';
+  universe?: string;
+  recipeId?: string;
+  variationId?: string;
+  seriesId?: string;
+  seriesEpisode?: number;
+  playlists?: string[];
+  thumbnailStyle?: string;
+  mainSound?: string;
+  benefit?: string;
+  experience?: string;
 };
 
 export type AmbientSoundEvent = {
@@ -109,7 +120,7 @@ export type AmbientAudioTimeline = {
 };
 
 export type AmbientVisualTimeline = {
-  strategy: 'continuous' | 'loop' | 'kenburns';
+  strategy: 'continuous' | 'loop' | 'kenburns' | 'synthetic';
   queries: string[];
   clips: Array<{
     query: string;
@@ -117,6 +128,8 @@ export type AmbientVisualTimeline = {
     sourceUrl?: string;
     localFile?: string;
     durationSec: number;
+    author?: string;
+    license?: string;
   }>;
   effects: {
     slowZoom: boolean;

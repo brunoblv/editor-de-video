@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { prisma } from '@editor-video/db';
+import { requireProjectAccess } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,7 @@ interface ReorderBody {
 export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id: projectId } = await params;
+    await requireProjectAccess(projectId);
     const body = (await request.json()) as ReorderBody;
 
     const order = Array.isArray(body.order)

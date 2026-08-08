@@ -105,6 +105,59 @@ export async function importSoundAsset(input: ImportSoundInput): Promise<string>
   return asset.id;
 }
 
+/** Reanalisa um SoundAsset já persistido (probe + loudness + scores). */
+export async function reanalyzeSoundAsset(assetId: string): Promise<void> {
+  const asset = await prisma.soundAsset.findUnique({ where: { id: assetId } });
+  if (!asset) throw new Error(`SoundAsset ${assetId} não encontrado.`);
+  if (!asset.localKey || asset.localKey === 'pending') {
+    throw new Error(`SoundAsset ${assetId} sem arquivo local.`);
+  }
+
+  const storage = getStorage();
+  const localPath = await storage.toLocalPath(asset.localKey);
+  const info = await probe(localPath);
+
+  let lufs: number | null = null;
+  let peak: number | null = null;
+  try {
+    const { stderr } = await runFfmpeg('ffmpeg', [
+      '-i',
+      localPath,
+      '-af',
+      'loudnorm=print_format=json',
+      '-f',
+      'null',
+      '-',
+    ]);
+    const jsonStart = stderr.lastIndexOf('{');
+    const jsonEnd = stderr.lastIndexOf('}');
+    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+      const parsed = JSON.parse(stderr.slice(jsonStart, jsonEnd + 1)) as {
+        input_i?: string;
+        input_tp?: string;
+      };
+      lufs = Number(parsed.input_i);
+      peak = Number(parsed.input_tp);
+    }
+  } catch {
+    // best-effort
+  }
+
+  await prisma.soundAsset.update({
+    where: { id: assetId },
+    data: {
+      durationSec: info.durationSec,
+      sampleRate: null,
+      channels: null,
+      lufs: Number.isFinite(lufs) ? lufs : null,
+      peak: Number.isFinite(peak) ? peak : null,
+      qualityScore: scoreTechnical({ durationSec: info.durationSec, hasAudio: info.hasAudio }),
+      loopScore: scoreLoop(info.durationSec),
+      verified: asset.verified || asset.licenseVerdict !== LicenseVerdict.UNKNOWN,
+    },
+  });
+}
+
 function scoreTechnical(opts: { durationSec: number; hasAudio: boolean }): number {
   let score = 50;
   if (!opts.hasAudio) return 0;

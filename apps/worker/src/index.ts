@@ -7,6 +7,7 @@ import {
 } from '@editor-video/core';
 import { prisma, ProjectKind } from '@editor-video/db';
 import { runAmbientPipeline } from './ambient/pipeline.js';
+import { reanalyzeSoundAsset } from './ambient/sound-analyzer.js';
 import { assertFfmpegAvailable } from './ffmpeg.js';
 import { markProjectFailed, runRenderPipeline } from './pipeline.js';
 import { runCuriosidadePipeline } from './v2/pipeline-curiosidade.js';
@@ -21,6 +22,12 @@ async function main(): Promise<void> {
   const worker = new Worker<RenderJobData>(
     RENDER_QUEUE,
     async (job: Job<RenderJobData>) => {
+      if (job.data.analyzeSoundAssetId) {
+        log.info(`job ${job.id}: analisando sound asset ${job.data.analyzeSoundAssetId}`);
+        await reanalyzeSoundAsset(job.data.analyzeSoundAssetId);
+        return;
+      }
+
       const { projectId } = job.data;
       log.info(`job ${job.id}: iniciando projeto ${projectId} (tentativa ${job.attemptsMade + 1})`);
 
@@ -29,7 +36,6 @@ async function main(): Promise<void> {
         select: { id: true, kind: true },
       });
       if (!project) {
-        // Job órfão (projeto apagado enquanto estava na fila) — não retentar.
         throw new UnrecoverableError(
           `Projeto ${projectId} não encontrado (provavelmente foi apagado).`,
         );
@@ -57,11 +63,10 @@ async function main(): Promise<void> {
   worker.on('failed', (job, err) => {
     log.error(`job ${job?.id}: falhou — ${err.message}`);
     if (!job) return;
-    // Projetos apagados: só registra, sem tentar UPDATE no banco.
+    if (job.data.analyzeSoundAssetId) return;
     if (err.message.includes('não encontrado')) {
       return;
     }
-    // Só marca FAILED quando não há mais retentativas pendentes.
     const attemptsLeft = (job.opts.attempts ?? 1) - (job.attemptsMade ?? 0);
     if (attemptsLeft <= 0) {
       void markProjectFailed(job.data.projectId, err.message);

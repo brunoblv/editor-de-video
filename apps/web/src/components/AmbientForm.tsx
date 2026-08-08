@@ -1,439 +1,318 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useMemo, useState, type FormEvent } from 'react';
-
-const ENVIRONMENTS = [
-  { value: 'cabin', label: 'Cabana' },
-  { value: 'forest', label: 'Floresta' },
-  { value: 'ocean', label: 'Oceano' },
-  { value: 'cafe', label: 'Café' },
-  { value: 'room', label: 'Quarto' },
-  { value: 'city', label: 'Cidade' },
-];
-
-const WEATHERS = [
-  { value: 'rain', label: 'Chuva' },
-  { value: 'heavy_rain', label: 'Chuva forte' },
-  { value: 'thunderstorm', label: 'Tempestade' },
-  { value: 'clear', label: 'Limpo' },
-  { value: 'wind', label: 'Vento' },
-];
-
-const TIMES = [
-  { value: 'night', label: 'Noite' },
-  { value: 'day', label: 'Dia' },
-  { value: 'dusk', label: 'Entardecer' },
-];
-
-const PURPOSES = [
-  { value: 'sleep', label: 'Dormir' },
-  { value: 'relax', label: 'Relaxar' },
-  { value: 'study', label: 'Estudar' },
-  { value: 'immersive', label: 'Imersivo' },
-];
-
-const DURATIONS = [30, 60, 120, 180, 480, 600];
-
-const PRESETS = [
-  { value: 'RAIN_SLEEP', label: 'Chuva para dormir' },
-  { value: 'COZY_FIREPLACE', label: 'Lareira aconchegante' },
-  { value: 'THUNDERSTORM', label: 'Tempestade' },
-  { value: 'BROWN_NOISE', label: 'Brown noise' },
-  { value: 'FOREST_NIGHT', label: 'Floresta à noite' },
-  { value: 'OCEAN_SLEEP', label: 'Oceano' },
-  { value: 'RAINY_CAFE', label: 'Café chuvoso' },
-] as const;
-
-type PresetId = (typeof PRESETS)[number]['value'];
-
-const SOUND_OPTS = [
-  { key: 'rain', label: 'Chuva' },
-  { key: 'roof_rain', label: 'Chuva no telhado' },
-  { key: 'forest', label: 'Floresta' },
-  { key: 'ocean', label: 'Oceano' },
-  { key: 'fireplace', label: 'Lareira' },
-  { key: 'wind', label: 'Vento' },
-  { key: 'distant_thunder', label: 'Trovões' },
-  { key: 'room_ambience', label: 'Ambiente de sala' },
-  { key: 'city_rain', label: 'Chuva na cidade' },
-  { key: 'brown_noise', label: 'Brown noise' },
-];
-
-const PRESET_DEFAULTS: Record<
-  PresetId,
-  {
-    environment: string;
-    weather: string;
-    timeOfDay: string;
-    purpose: string;
-    layers: string[];
-  }
-> = {
-  RAIN_SLEEP: {
-    environment: 'cabin',
-    weather: 'heavy_rain',
-    timeOfDay: 'night',
-    purpose: 'sleep',
-    layers: ['rain', 'roof_rain', 'wind', 'distant_thunder', 'fireplace'],
-  },
-  COZY_FIREPLACE: {
-    environment: 'cabin',
-    weather: 'clear',
-    timeOfDay: 'night',
-    purpose: 'relax',
-    layers: ['fireplace', 'room_ambience', 'wind'],
-  },
-  THUNDERSTORM: {
-    environment: 'cabin',
-    weather: 'thunderstorm',
-    timeOfDay: 'night',
-    purpose: 'immersive',
-    layers: ['rain', 'roof_rain', 'wind', 'distant_thunder'],
-  },
-  BROWN_NOISE: {
-    environment: 'room',
-    weather: 'clear',
-    timeOfDay: 'night',
-    purpose: 'sleep',
-    layers: ['brown_noise'],
-  },
-  FOREST_NIGHT: {
-    environment: 'forest',
-    weather: 'rain',
-    timeOfDay: 'night',
-    purpose: 'sleep',
-    layers: ['forest', 'rain', 'wind', 'distant_thunder'],
-  },
-  OCEAN_SLEEP: {
-    environment: 'ocean',
-    weather: 'clear',
-    timeOfDay: 'night',
-    purpose: 'sleep',
-    layers: ['ocean', 'wind'],
-  },
-  RAINY_CAFE: {
-    environment: 'cafe',
-    weather: 'rain',
-    timeOfDay: 'day',
-    purpose: 'study',
-    layers: ['rain', 'room_ambience', 'city_rain'],
-  },
-};
-
-const ENV_PRESET: Record<string, PresetId> = {
-  cabin: 'RAIN_SLEEP',
-  forest: 'FOREST_NIGHT',
-  ocean: 'OCEAN_SLEEP',
-  cafe: 'RAINY_CAFE',
-  room: 'BROWN_NOISE',
-  city: 'RAIN_SLEEP',
-};
-
-function layersFromKeys(keys: string[]): Record<string, boolean> {
-  const next: Record<string, boolean> = {};
-  for (const opt of SOUND_OPTS) next[opt.key] = keys.includes(opt.key);
-  return next;
-}
-
-function defaultLayersForEnv(environment: string, weather: string): string[] {
-  const defaults = PRESET_DEFAULTS[ENV_PRESET[environment] ?? 'RAIN_SLEEP'];
-  if (environment === 'forest') {
-    const layers = ['forest', 'wind'];
-    if (weather !== 'clear') layers.push('rain');
-    if (weather.includes('thunder') || weather.includes('heavy')) layers.push('distant_thunder');
-    return layers;
-  }
-  if (environment === 'ocean') return weather.includes('rain') ? ['ocean', 'rain', 'wind'] : ['ocean', 'wind'];
-  if (environment === 'cafe') return ['rain', 'room_ambience', 'city_rain'];
-  if (environment === 'city') return ['city_rain', 'rain', 'wind'];
-  if (environment === 'room') {
-    return weather === 'clear' ? ['room_ambience', 'brown_noise'] : ['rain', 'room_ambience', 'wind'];
-  }
-  return defaults.layers;
-}
+import { useRouter } from 'next/navigation';
+import {
+  MIDNIGHT_RECIPES,
+  MIDNIGHT_TAGLINE,
+  MIDNIGHT_UNIVERSES,
+  getMidnightRecipe,
+  type MidnightUniverse,
+} from '@editor-video/core/midnight';
 
 export function AmbientForm() {
   const router = useRouter();
-  const [environment, setEnvironment] = useState('cabin');
-  const [weather, setWeather] = useState('heavy_rain');
-  const [timeOfDay, setTimeOfDay] = useState('night');
-  const [purpose, setPurpose] = useState('sleep');
+  const [universe, setUniverse] = useState<MidnightUniverse | ''>('');
+  const [recipeId, setRecipeId] = useState(MIDNIGHT_RECIPES[0]!.id);
+  const [variationId, setVariationId] = useState<string>(MIDNIGHT_RECIPES[0]!.variations[0]!.id);
   const [durationMinutes, setDurationMinutes] = useState(60);
-  const [preset, setPreset] = useState<PresetId>('RAIN_SLEEP');
   const [format, setFormat] = useState<'youtube' | 'shorts'>('youtube');
-  const [layers, setLayers] = useState<Record<string, boolean>>(() =>
-    layersFromKeys(PRESET_DEFAULTS.RAIN_SLEEP.layers),
-  );
-  const [autoConcept, setAutoConcept] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedVariations, setSelectedVariations] = useState<string[]>([
+    MIDNIGHT_RECIPES[0]!.variations[0]!.id,
+  ]);
+  const [selectedDurations, setSelectedDurations] = useState<number[]>([60]);
   const [autoSearch, setAutoSearch] = useState(true);
   const [generateThumbnail, setGenerateThumbnail] = useState(true);
   const [generateMetadata, setGenerateMetadata] = useState(true);
   const [qualityCheck, setQualityCheck] = useState(true);
-  const [createVariations, setCreateVariations] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
-  const audioLayers = useMemo(
-    () => SOUND_OPTS.filter((o) => layers[o.key]).map((o) => o.key),
-    [layers],
-  );
+  const recipes = useMemo(() => {
+    if (!universe) return MIDNIGHT_RECIPES;
+    return MIDNIGHT_RECIPES.filter((r) => r.universe === universe);
+  }, [universe]);
 
-  function applyPreset(next: PresetId): void {
-    const defaults = PRESET_DEFAULTS[next];
-    setPreset(next);
-    setEnvironment(defaults.environment);
-    setWeather(defaults.weather);
-    setTimeOfDay(defaults.timeOfDay);
-    setPurpose(defaults.purpose);
-    setLayers(layersFromKeys(defaults.layers));
+  const recipe = getMidnightRecipe(recipeId);
+
+  function selectRecipe(id: string) {
+    const next = getMidnightRecipe(id);
+    setRecipeId(next.id);
+    setVariationId(next.variations[0]!.id);
+    setSelectedVariations([next.variations[0]!.id]);
+    setDurationMinutes(next.defaultDurationsMin[0] ?? 60);
+    setSelectedDurations([next.defaultDurationsMin[0] ?? 60]);
   }
 
-  function onEnvironmentChange(next: string): void {
-    setEnvironment(next);
-    const matched = ENV_PRESET[next];
-    if (matched) {
-      setPreset(matched);
-      const defaults = PRESET_DEFAULTS[matched];
-      // Mantém clima/horário escolhidos; só ajusta camadas ao ambiente.
-      setLayers(layersFromKeys(defaultLayersForEnv(next, weather)));
-      if (next === defaults.environment) {
-        setPurpose(defaults.purpose);
-      }
-    } else {
-      setLayers(layersFromKeys(defaultLayersForEnv(next, weather)));
+  function selectUniverse(id: MidnightUniverse | '') {
+    setUniverse(id);
+    if (id) {
+      const first = MIDNIGHT_RECIPES.find((r) => r.universe === id);
+      if (first) selectRecipe(first.id);
     }
   }
 
-  function onWeatherChange(next: string): void {
-    setWeather(next);
-    setLayers(layersFromKeys(defaultLayersForEnv(environment, next)));
+  function toggleVariation(id: string) {
+    setSelectedVariations((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   }
 
-  async function onSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setSaving(true);
+  function toggleDuration(min: number) {
+    setSelectedDurations((prev) =>
+      prev.includes(min) ? prev.filter((x) => x !== min) : [...prev, min],
+    );
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
     setError(null);
     try {
-      const response = await fetch('/api/ambient', {
+      const body = batchMode
+        ? {
+            recipeId,
+            createBatch: true,
+            variations: selectedVariations,
+            durations: selectedDurations,
+            format,
+            autoSearch,
+            generateThumbnail,
+            generateMetadata,
+            qualityCheck,
+            startPreview: true,
+          }
+        : {
+            recipeId,
+            variationId,
+            durationMinutes,
+            format,
+            autoSearch,
+            generateThumbnail,
+            generateMetadata,
+            qualityCheck,
+            startPreview: true,
+          };
+
+      const res = await fetch('/api/ambient', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          environment,
-          weather,
-          timeOfDay,
-          purpose,
-          durationMinutes,
-          preset: autoConcept ? null : preset,
-          format,
-          audioLayers,
-          autoConcept,
-          autoSearch,
-          generateThumbnail,
-          generateMetadata,
-          qualityCheck,
-          createVariations,
-          startPreview: true,
-        }),
+        body: JSON.stringify(body),
       });
-      const payload = (await response.json()) as { project?: { id: string }; error?: string };
-      if (!response.ok || !payload.project) {
-        throw new Error(payload.error ?? 'Não foi possível criar o ambiente.');
+      const data = (await res.json()) as {
+        project?: { id: string };
+        projects?: Array<{ id: string }>;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao criar.');
+
+      if (batchMode && data.projects?.length) {
+        router.push('/ambient');
+        router.refresh();
+      } else if (data.project?.id) {
+        router.push(`/projects/${data.project.id}`);
+      } else {
+        router.refresh();
       }
-      router.push(`/projects/${payload.project.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado.');
-      setSaving(false);
+    } finally {
+      setBusy(false);
     }
   }
 
+  const batchCount = selectedVariations.length * selectedDurations.length;
+
   return (
-    <form className="card" onSubmit={onSubmit}>
-      <h2>Gerar ambiente</h2>
+    <form className="card" onSubmit={(e) => void onSubmit(e)}>
+      <h2 style={{ marginTop: 0 }}>Escolha onde você quer estar esta noite</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Soundscape em camadas · preview obrigatório · licenças verificadas
+        {MIDNIGHT_TAGLINE}
       </p>
+
       {error ? <div className="error">{error}</div> : null}
 
-      <div className="grid-2">
-        <div>
-          <label htmlFor="amb-env">Ambiente</label>
-          <select
-            id="amb-env"
-            value={environment}
-            disabled={autoConcept}
-            onChange={(e) => onEnvironmentChange(e.target.value)}
+      <label>
+        Universo
+        <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          <button
+            type="button"
+            className={!universe ? 'primary' : undefined}
+            onClick={() => selectUniverse('')}
           >
-            {ENVIRONMENTS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-weather">Clima</label>
-          <select
-            id="amb-weather"
-            value={weather}
-            disabled={autoConcept}
-            onChange={(e) => onWeatherChange(e.target.value)}
-          >
-            {WEATHERS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-time">Horário</label>
-          <select
-            id="amb-time"
-            value={timeOfDay}
-            disabled={autoConcept}
-            onChange={(e) => setTimeOfDay(e.target.value)}
-          >
-            {TIMES.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-purpose">Finalidade</label>
-          <select
-            id="amb-purpose"
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-          >
-            {PURPOSES.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-dur">Duração</label>
-          <select
-            id="amb-dur"
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(Number(e.target.value))}
-          >
-            {DURATIONS.map((d) => (
-              <option key={d} value={d}>
-                {d >= 60 ? `${d / 60} hora${d === 60 ? '' : 's'}` : `${d} min`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-format">Formato</label>
-          <select
-            id="amb-format"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as 'youtube' | 'shorts')}
-          >
-            <option value="youtube">YouTube 16:9</option>
-            <option value="shorts">Shorts 9:16</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="amb-preset">Preset</label>
-          <select
-            id="amb-preset"
-            value={preset}
-            disabled={autoConcept}
-            onChange={(e) => applyPreset(e.target.value as PresetId)}
-          >
-            {PRESETS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div className="muted" style={{ marginBottom: 8 }}>
-          Camadas sonoras
-        </div>
-        <div className="row" style={{ flexWrap: 'wrap', gap: 12 }}>
-          {SOUND_OPTS.map((opt) => (
-            <label key={opt.key} className="row" style={{ gap: 6 }}>
-              <input
-                type="checkbox"
-                checked={Boolean(layers[opt.key])}
-                disabled={autoConcept}
-                onChange={(e) =>
-                  setLayers((prev) => ({ ...prev, [opt.key]: e.target.checked }))
-                }
-              />
-              {opt.label}
-            </label>
+            Todos
+          </button>
+          {MIDNIGHT_UNIVERSES.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              className={universe === u.id ? 'primary' : undefined}
+              onClick={() => selectUniverse(u.id)}
+              title={u.blurb}
+            >
+              {u.label}
+            </button>
           ))}
         </div>
-      </div>
+      </label>
 
-      <div className="row" style={{ marginTop: 16, flexWrap: 'wrap', gap: 12 }}>
-        <label className="row" style={{ gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={autoConcept}
-            onChange={(e) => setAutoConcept(e.target.checked)}
-          />
-          Escolher conceito automaticamente
-        </label>
-        <label className="row" style={{ gap: 6 }}>
+      <label style={{ display: 'block', marginTop: 16 }}>
+        Receita
+        <select
+          value={recipeId}
+          onChange={(e) => selectRecipe(e.target.value)}
+          style={{ width: '100%', marginTop: 6 }}
+        >
+          {recipes.map((r) => (
+            <option key={r.id} value={r.id}>
+              Ep {String(r.episode).padStart(2, '0')} — {r.name} ({r.pillar})
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted" style={{ marginTop: 6 }}>
+        {recipe.experience} · {recipe.mainSound}
+      </p>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+        <input
+          type="checkbox"
+          checked={batchMode}
+          onChange={(e) => setBatchMode(e.target.checked)}
+        />
+        Gerar lote experimental (variações × durações)
+      </label>
+
+      {!batchMode ? (
+        <div className="grid-2" style={{ marginTop: 12 }}>
+          <label>
+            Variação
+            <select
+              value={variationId}
+              onChange={(e) => setVariationId(e.target.value)}
+              style={{ width: '100%', marginTop: 6 }}
+            >
+              {recipe.variations.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label} — {v.benefit}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Duração (min)
+            <select
+              value={durationMinutes}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              style={{ width: '100%', marginTop: 6 }}
+            >
+              {recipe.defaultDurationsMin.map((d) => (
+                <option key={d} value={d}>
+                  {d} min
+                </option>
+              ))}
+              {!recipe.defaultDurationsMin.includes(360) ? (
+                <option value={360}>360 min</option>
+              ) : null}
+              {!recipe.defaultDurationsMin.includes(600) ? (
+                <option value={600}>600 min</option>
+              ) : null}
+            </select>
+          </label>
+        </div>
+      ) : (
+        <div style={{ marginTop: 12 }}>
+          <div className="muted" style={{ marginBottom: 8 }}>
+            Variações
+          </div>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            {recipe.variations.map((v) => (
+              <label key={v.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedVariations.includes(v.id)}
+                  onChange={() => toggleVariation(v.id)}
+                />
+                {v.label}
+              </label>
+            ))}
+          </div>
+          <div className="muted" style={{ margin: '12px 0 8px' }}>
+            Durações
+          </div>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            {recipe.defaultDurationsMin.map((d) => (
+              <label key={d} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedDurations.includes(d)}
+                  onChange={() => toggleDuration(d)}
+                />
+                {d} min
+              </label>
+            ))}
+          </div>
+          <p className="muted" style={{ marginTop: 8 }}>
+            Lote: {batchCount} projeto{batchCount === 1 ? '' : 's'}
+          </p>
+        </div>
+      )}
+
+      <label style={{ display: 'block', marginTop: 16 }}>
+        Formato
+        <select
+          value={format}
+          onChange={(e) => setFormat(e.target.value as 'youtube' | 'shorts')}
+          style={{ width: '100%', marginTop: 6 }}
+        >
+          <option value="youtube">YouTube 16:9</option>
+          <option value="shorts">Shorts 9:16</option>
+        </select>
+      </label>
+
+      <div className="row" style={{ flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="checkbox"
             checked={autoSearch}
             onChange={(e) => setAutoSearch(e.target.checked)}
           />
-          Pesquisar assets automaticamente
+          Stock visual
         </label>
-        <label className="row" style={{ gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={createVariations}
-            onChange={(e) => setCreateVariations(e.target.checked)}
-          />
-          Criar variações
-        </label>
-        <label className="row" style={{ gap: 6 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="checkbox"
             checked={generateThumbnail}
             onChange={(e) => setGenerateThumbnail(e.target.checked)}
           />
-          Gerar thumbnail
+          Thumbnail
         </label>
-        <label className="row" style={{ gap: 6 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="checkbox"
             checked={generateMetadata}
             onChange={(e) => setGenerateMetadata(e.target.checked)}
           />
-          Gerar metadata
+          Metadata
         </label>
-        <label className="row" style={{ gap: 6 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="checkbox"
             checked={qualityCheck}
             onChange={(e) => setQualityCheck(e.target.checked)}
           />
-          Quality Check
+          Quality check
         </label>
       </div>
 
-      <div style={{ marginTop: 20 }}>
-        <button className="primary" type="submit" disabled={saving || audioLayers.length === 0}>
-          {saving ? 'Criando...' : 'GERAR AMBIENTE'}
-        </button>
-      </div>
+      <button className="primary" type="submit" disabled={busy} style={{ marginTop: 20 }}>
+        {busy
+          ? 'Criando…'
+          : batchMode
+            ? `Gerar lote (${batchCount})`
+            : 'Gerar preview'}
+      </button>
     </form>
   );
 }

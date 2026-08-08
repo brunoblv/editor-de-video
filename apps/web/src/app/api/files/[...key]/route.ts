@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Readable } from 'node:stream';
 import type { NextRequest } from 'next/server';
 import { getStorage } from '@editor-video/core';
+import { requireStorageKeyAccess } from '@/lib/auth-guards';
 import { ApiError, handle } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,12 @@ const CONTENT_TYPES: Record<string, string> = {
   '.webm': 'video/webm',
   '.mkv': 'video/x-matroska',
   '.avi': 'video/x-msvideo',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
 };
 
 type Params = { params: Promise<{ key: string[] }> };
@@ -21,6 +28,8 @@ export async function GET(request: NextRequest, { params }: Params): Promise<Res
   return handle(async () => {
     const { key: segments } = await params;
     const key = segments.map((segment) => decodeURIComponent(segment)).join('/');
+
+    await requireStorageKeyAccess(key);
 
     const storage = getStorage();
     if (!(await storage.exists(key))) throw new ApiError('Arquivo não encontrado.', 404);

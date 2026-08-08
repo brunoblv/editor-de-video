@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { getStorage, storageKeys } from '@editor-video/core';
 import { prisma } from '@editor-video/db';
+import { requireProjectAccess } from '@/lib/auth-guards';
 import { toProjectDTO } from '@/lib/dto';
 import { ApiError, handle, json } from '@/lib/http';
 
@@ -11,6 +12,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(_request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id } = await params;
+    await requireProjectAccess(id);
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
@@ -32,6 +34,7 @@ interface PatchBody {
 export async function PATCH(request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id } = await params;
+    await requireProjectAccess(id);
     const body = (await request.json()) as PatchBody;
     const data: { title?: string; watermark?: string | null; topic?: string | null } = {};
 
@@ -66,6 +69,7 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
 export async function DELETE(_request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id } = await params;
+    await requireProjectAccess(id);
     await prisma.project.delete({ where: { id } });
     await getStorage().deletePrefix(storageKeys.project(id));
     return json({ ok: true });

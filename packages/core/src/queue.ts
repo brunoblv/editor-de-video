@@ -8,12 +8,17 @@ export type AmbientRenderMode =
   | 'render'
   | 'regenerate_audio'
   | 'regenerate_visual'
-  | 'regenerate_all';
+  | 'regenerate_all'
+  | 'generate_short';
 
 export interface RenderJobData {
   projectId: string;
   /** Modo do pipeline Ambient (ignorado pelos outros kinds). */
   ambientMode?: AmbientRenderMode;
+  /** Quando presente, o worker só reanalisa este SoundAsset (sem render). */
+  analyzeSoundAssetId?: string;
+  /** Publish no YouTube após render (somente se gates passarem). */
+  publishToYoutube?: boolean;
 }
 
 export function redisConnection(): ConnectionOptions {

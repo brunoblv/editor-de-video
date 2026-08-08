@@ -18,16 +18,36 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
   const [project, setProject] = useState(initialProject);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [metaTitle, setMetaTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+  const [metaTags, setMetaTags] = useState('');
 
   const isActive = ACTIVE_STATUSES.has(project.status);
   const waitingPreview = project.status === 'WAITING_PREVIEW_APPROVAL';
-  const ready = project.status === 'READY_FOR_REVIEW' || project.status === 'READY';
+  const ready =
+    project.status === 'READY_FOR_REVIEW' ||
+    project.status === 'READY' ||
+    project.status === 'PUBLISHED';
 
   const refresh = useCallback(async () => {
     const data = await api<{ project: ProjectDTO }>(`/api/projects/${project.id}`);
     setProject(data.project);
     return data.project;
   }, [project.id]);
+
+  useEffect(() => {
+    const metadata =
+      project.metadataJson && typeof project.metadataJson === 'object'
+        ? (project.metadataJson as {
+            title?: string;
+            description?: string;
+            tags?: string[];
+          })
+        : null;
+    setMetaTitle(metadata?.title ?? project.title);
+    setMetaDescription(metadata?.description ?? '');
+    setMetaTags((metadata?.tags ?? []).join(', '));
+  }, [project.id, project.metadataJson, project.title]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -60,6 +80,33 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
     });
   }
 
+  async function savePackaging(): Promise<void> {
+    await run(async () => {
+      await api(`/api/ambient/${project.id}/metadata`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: metaTitle,
+          description: metaDescription,
+          tags: metaTags
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean),
+        }),
+      });
+    });
+  }
+
+  async function publishYoutube(asShort = false): Promise<void> {
+    await run(async () => {
+      await api(`/api/youtube/publish/${project.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privacyStatus: 'private', asShort }),
+      });
+    });
+  }
+
   async function removeProject(): Promise<void> {
     if (!window.confirm('Apagar este projeto ambient e todos os arquivos?')) return;
     await run(async () => {
@@ -79,6 +126,8 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
           title?: string;
           description?: string;
           tags?: string[];
+          playlists?: string[];
+          youtubeUrl?: string;
         })
       : null;
 
@@ -102,8 +151,10 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
         </span>
       </div>
       <p className="muted" style={{ marginTop: 0, marginBottom: 24 }}>
-        {KIND_LABEL[project.kind]} · {project.environment} · {project.weather} ·{' '}
-        {project.durationMinutes} min · seed {project.seed}
+        {KIND_LABEL[project.kind]} · {project.universe ?? project.environment} ·{' '}
+        {project.variationId ?? project.weather} · {project.durationMinutes} min · seed{' '}
+        {project.seed}
+        {project.recipeId ? ` · ${project.recipeId}` : ''}
         {project.qualityScore != null ? ` · score ${Math.round(project.qualityScore)}` : ''}
       </p>
 
@@ -143,7 +194,11 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
                 <button type="button" disabled={busy} onClick={() => void enqueue('regenerate_audio')}>
                   REGERAR ÁUDIO
                 </button>
-                <button type="button" disabled={busy} onClick={() => void enqueue('regenerate_visual')}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void enqueue('regenerate_visual')}
+                >
                   REGERAR VISUAL
                 </button>
                 <button type="button" disabled={busy} onClick={() => void enqueue('regenerate_all')}>
@@ -165,13 +220,45 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
                 {project.outputSizeByte
                   ? `${(project.outputSizeByte / 1024 / 1024).toFixed(1)} MB`
                   : ''}{' '}
-                · 1920×1080 · {project.durationMinutes} min
+                · {project.durationMinutes} min
+                {project.youtubeVideoId ? (
+                  <>
+                    {' · '}
+                    <a
+                      href={`https://youtu.be/${project.youtubeVideoId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      YouTube
+                    </a>
+                  </>
+                ) : null}
               </p>
-              <a href={fileUrl(project.outputKey, true)} download>
-                <button className="primary" type="button">
-                  Baixar MP4
-                </button>
-              </a>
+              <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <a href={fileUrl(project.outputKey, true)} download>
+                  <button className="primary" type="button">
+                    Baixar MP4
+                  </button>
+                </a>
+                {project.status === 'READY_FOR_REVIEW' || project.status === 'PUBLISHED' ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void publishYoutube(false)}
+                    >
+                      Publicar no YouTube
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void enqueue('generate_short')}
+                    >
+                      Gerar Short
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -188,6 +275,7 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
             <div>License Safety: {String(quality.licenseSafety)}</div>
             <div>
               <strong>TOTAL: {String(quality.total)}</strong>
+              {quality.passed === false ? ' · bloqueia publish' : ''}
             </div>
           </div>
           {Array.isArray(quality.notes) && quality.notes.length > 0 ? (
@@ -213,20 +301,41 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
         </div>
       ) : null}
 
-      {metadata ? (
-        <div className="card">
-          <h2>Metadata</h2>
-          <p style={{ marginTop: 0 }}>
-            <strong>{metadata.title}</strong>
-          </p>
-          <pre
-            className="muted"
-            style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: 0 }}
-          >
-            {metadata.description}
-          </pre>
-        </div>
-      ) : null}
+      <div className="card">
+        <h2>Packaging YouTube</h2>
+        <label style={{ display: 'block', marginBottom: 12 }}>
+          Título
+          <input
+            value={metaTitle}
+            onChange={(e) => setMetaTitle(e.target.value)}
+            style={{ width: '100%', marginTop: 6 }}
+            maxLength={100}
+          />
+        </label>
+        <label style={{ display: 'block', marginBottom: 12 }}>
+          Descrição
+          <textarea
+            value={metaDescription}
+            onChange={(e) => setMetaDescription(e.target.value)}
+            rows={10}
+            style={{ width: '100%', marginTop: 6, fontFamily: 'inherit' }}
+          />
+        </label>
+        <label style={{ display: 'block', marginBottom: 12 }}>
+          Tags (vírgula)
+          <input
+            value={metaTags}
+            onChange={(e) => setMetaTags(e.target.value)}
+            style={{ width: '100%', marginTop: 6 }}
+          />
+        </label>
+        {metadata?.playlists?.length ? (
+          <p className="muted">Playlists: {metadata.playlists.join(', ')}</p>
+        ) : null}
+        <button type="button" disabled={busy} onClick={() => void savePackaging()}>
+          Salvar packaging
+        </button>
+      </div>
 
       <div className="card">
         <h2>Ações</h2>
@@ -241,6 +350,9 @@ export function AmbientEditor({ initialProject }: { initialProject: ProjectDTO }
               Gerar preview
             </button>
           ) : null}
+          <a href="/ambient/youtube" className="muted">
+            YouTube settings
+          </a>
           <button type="button" className="danger" disabled={busy} onClick={() => void removeProject()}>
             Apagar
           </button>

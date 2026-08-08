@@ -20,6 +20,7 @@ enum ProjectStatus {
   WAITING_PREVIEW_APPROVAL
   READY
   READY_FOR_REVIEW
+  PUBLISHED
   FAILED
 }
 
@@ -30,12 +31,68 @@ enum LicenseVerdict {
   REJECTED
 }
 
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  projects        Project[]
+  youtubeChannel  YouTubeChannel?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
 model Project {
   id        String        @id @default(cuid())
   title     String
   watermark String?
   status    ProjectStatus @default(DRAFT)
   kind      ProjectKind   @default(TOP_LIST)
+
+  /// Dono do projeto (nullable só para backfill de dados legados)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   /// Tema informado pelo usuário (pipeline Curiosidade)
   topic String?
@@ -73,6 +130,25 @@ model Project {
   previewKey        String?
   metadataJson      Json?
 
+  /// Recipe versionada (Ambient)
+  recipeId        String?
+  recipe          Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  recipeVersion   Int?
+  pipelineVersion String?
+
+  /// Midnight brand / packaging
+  universe            String?
+  variationId         String?
+  seriesId            String?
+  seriesEpisode       Int?
+  youtubeVideoId      String?
+  youtubeShortId      String?
+  youtubePlaylistIds  String[] @default([])
+  publishedAt         DateTime?
+  parentProjectId     String?
+  parentProject       Project?  @relation("AmbientShortCompanion", fields: [parentProjectId], references: [id], onDelete: SetNull)
+  shortCompanions     Project[] @relation("AmbientShortCompanion")
+
   clips               Clip[]
   mediaAssets         MediaAsset[]
   ambientProjectAssets AmbientProjectAsset[]
@@ -83,6 +159,10 @@ model Project {
   @@index([createdAt])
   @@index([kind])
   @@index([status])
+  @@index([userId])
+  @@index([recipeId])
+  @@index([universe])
+  @@index([youtubeVideoId])
 }
 
 model Clip {
@@ -106,7 +186,7 @@ model Clip {
   /// Duração do arquivo original, em segundos (preenchida no upload via ffprobe)
   sourceDurationSec Float?
   /// Teto de duração aplicado na normalização
-  maxDurationSec Float @default(15)
+  maxDurationSec Float @default(60)
 
   /// Preenchidos pelo worker após a normalização
   normalizedKey         String?
@@ -203,4 +283,50 @@ model AmbientProjectAsset {
 
   @@index([projectId])
   @@index([assetId])
+}
+
+model Recipe {
+  id          String          @id
+  name        String
+  description String?
+  universe    String?
+  pillar      String?
+  seriesId    String?
+  episode     Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    RecipeVersion[]
+  projects    Project[]
+}
+
+model RecipeVersion {
+  id              String   @id @default(cuid())
+  recipeId        String
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  version         Int
+  definitionJson  Json
+  pipelineVersion String   @default("ambient-midnight-v1")
+  createdAt       DateTime @default(now())
+
+  @@unique([recipeId, version])
+  @@index([recipeId])
+}
+
+/// Canal YouTube conectado via OAuth (tokens só no servidor)
+model YouTubeChannel {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId      String
+  channelTitle   String?
+  accessToken    String
+  refreshToken   String
+  expiresAt      DateTime?
+  scope          String?
+  playlistMapJson Json?
+  connectedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId])
+  @@index([channelId])
 }

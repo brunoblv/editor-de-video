@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./midnight": {
+      "types": "./dist/midnight.d.ts",
+      "default": "./dist/midnight.js"
+    },
     "./render": {
       "types": "./dist/types.d.ts",
       "default": "./dist/types.js"

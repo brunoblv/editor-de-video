@@ -1,4 +1,4 @@
-import { LicenseVerdict } from '@editor-video/db';
+import { LicenseVerdict, prisma } from '@editor-video/db';
 import type { LicenseVerdict as LicenseVerdictType } from '@prisma/client';
 
 export type LicenseInput = {
@@ -123,3 +123,86 @@ export function assertUsable(decision: LicenseDecision): void {
     throw new Error(`License Guard bloqueou o asset: ${decision.reason}`);
   }
 }
+
+export type ProjectLicenseAsset = {
+  id: string;
+  kind: 'sound' | 'media' | 'synthetic';
+  name: string;
+  verdict: LicenseVerdictType;
+  attribution?: string | null;
+};
+
+export type ProjectLicenseReport = {
+  safe: boolean;
+  assets: ProjectLicenseAsset[];
+  attributionRequired: ProjectLicenseAsset[];
+  blocked: ProjectLicenseAsset[];
+};
+
+/** Revalida licenças de todos os assets ligados ao projeto Ambient. */
+export async function validateProjectLicenses(
+  projectId: string,
+): Promise<ProjectLicenseReport> {
+  const [usages, mediaAssets] = await Promise.all([
+    prisma.ambientProjectAsset.findMany({
+      where: { projectId },
+      include: { soundAsset: true },
+    }),
+    prisma.mediaAsset.findMany({ where: { projectId } }),
+  ]);
+
+  const assets: ProjectLicenseAsset[] = [];
+
+  for (const usage of usages) {
+    if (usage.soundAsset) {
+      const sa = usage.soundAsset;
+      assets.push({
+        id: sa.id,
+        kind: 'sound',
+        name: sa.name,
+        verdict: sa.licenseVerdict,
+        attribution: sa.attribution,
+      });
+      continue;
+    }
+    if (usage.type.startsWith('SOUND_SYNTH') || usage.type === 'synthetic') {
+      assets.push({
+        id: usage.id,
+        kind: 'synthetic',
+        name: usage.layer ?? usage.type,
+        verdict: LicenseVerdict.SAFE,
+      });
+    }
+  }
+
+  for (const media of mediaAssets) {
+    const decision = evaluateLicense({
+      provider: media.provider,
+      sourceUrl: media.sourceUrl,
+      author: media.author,
+      license: media.license,
+    });
+    assets.push({
+      id: media.id,
+      kind: 'media',
+      name: media.query || media.provider,
+      verdict: decision.verdict,
+      attribution: media.author,
+    });
+  }
+
+  const blocked = assets.filter(
+    (a) => a.verdict === LicenseVerdict.UNKNOWN || a.verdict === LicenseVerdict.REJECTED,
+  );
+  const attributionRequired = assets.filter(
+    (a) => a.verdict === LicenseVerdict.ATTRIBUTION_REQUIRED,
+  );
+
+  return {
+    safe: blocked.length === 0,
+    assets,
+    attributionRequired,
+    blocked,
+  };
+}
+

@@ -2,7 +2,9 @@ import path from 'node:path';
 import type { NextRequest } from 'next/server';
 import { getStorage, storageKeys } from '@editor-video/core';
 import { LicenseVerdict, prisma } from '@editor-video/db';
+import { requireUser } from '@/lib/auth-guards';
 import { evaluateLicense } from '@/lib/license-guard';
+import { renderQueue } from '@/lib/queue';
 import { ApiError, handle, json } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,7 @@ const ALLOWED_EXT = new Set(['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac']);
 
 export async function GET(request: NextRequest): Promise<Response> {
   return handle(async () => {
+    await requireUser();
     const category = request.nextUrl.searchParams.get('category');
     const assets = await prisma.soundAsset.findMany({
       where: category && category !== 'all' ? { category } : undefined,
@@ -23,6 +26,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   return handle(async () => {
+    await requireUser();
     const form = await request.formData();
     const file = form.get('file');
     if (!(file instanceof File)) throw new ApiError('Arquivo de áudio obrigatório.');
@@ -78,6 +82,13 @@ export async function POST(request: NextRequest): Promise<Response> {
       where: { id: asset.id },
       data: { localKey },
     });
+
+    // Enfileira análise completa (probe/loudnorm/scores) no worker.
+    await renderQueue.add(
+      'analyze-sound',
+      { projectId: 'sound-analyze', analyzeSoundAssetId: asset.id },
+      { jobId: `analyze-sound-${asset.id}-${Date.now()}`, attempts: 2 },
+    );
 
     return json({ asset: updated }, 201);
   });

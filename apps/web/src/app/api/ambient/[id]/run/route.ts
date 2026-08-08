@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
 import type { AmbientRenderMode } from '@editor-video/core';
+import { config } from '@editor-video/core';
 import { prisma, ProjectKind, ProjectStatus } from '@editor-video/db';
+import { requireProjectAccess } from '@/lib/auth-guards';
 import { renderQueue } from '@/lib/queue';
 import { ApiError, handle, json } from '@/lib/http';
 
@@ -14,11 +16,23 @@ const MODES = new Set<AmbientRenderMode>([
   'regenerate_audio',
   'regenerate_visual',
   'regenerate_all',
+  'generate_short',
 ]);
+
+const QUEUEABLE = [
+  ProjectStatus.DRAFT,
+  ProjectStatus.READY,
+  ProjectStatus.FAILED,
+  ProjectStatus.WAITING_PREVIEW_APPROVAL,
+  ProjectStatus.READY_FOR_REVIEW,
+  ProjectStatus.PUBLISHED,
+] as const;
 
 export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id } = await params;
+    await requireProjectAccess(id);
+
     const body = (await request.json().catch(() => ({}))) as { mode?: unknown };
     const modeRaw = typeof body.mode === 'string' ? body.mode : 'preview';
     if (!MODES.has(modeRaw as AmbientRenderMode)) {
@@ -40,6 +54,15 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
     }
 
     if (
+      mode === 'generate_short' &&
+      project.status !== ProjectStatus.READY_FOR_REVIEW &&
+      project.status !== ProjectStatus.PUBLISHED &&
+      project.status !== ProjectStatus.WAITING_PREVIEW_APPROVAL
+    ) {
+      throw new ApiError('Gere o Short a partir do preview ou vídeo pronto.');
+    }
+
+    if (
       (mode === 'regenerate_audio' ||
         mode === 'regenerate_visual' ||
         mode === 'regenerate_all') &&
@@ -50,8 +73,11 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
       throw new ApiError('Só é possível regerar a partir do preview ou revisão.');
     }
 
-    await prisma.project.update({
-      where: { id },
+    const queued = await prisma.project.updateMany({
+      where: {
+        id,
+        status: { in: [...QUEUEABLE] },
+      },
       data: {
         status: ProjectStatus.QUEUED,
         progress: 0,
@@ -59,14 +85,24 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
         errorMessage: null,
         ...(mode === 'render'
           ? { outputKey: null, outputSizeByte: null }
-          : { previewKey: mode === 'preview' || mode.startsWith('regenerate') ? null : project.previewKey }),
+          : {
+              previewKey:
+                mode === 'preview' || mode.startsWith('regenerate') ? null : project.previewKey,
+            }),
       },
     });
+
+    if (queued.count === 0) {
+      throw new ApiError('Este projeto já está na fila de produção.', 409);
+    }
 
     await renderQueue.add(
       'render-project',
       { projectId: id, ambientMode: mode },
-      { jobId: `project:${id}:${Date.now()}` },
+      {
+        jobId: `ambient-${id}-${mode}-${Date.now()}`,
+        attempts: config.ambient.maxRetries,
+      },
     );
 
     return json({ ok: true, mode });

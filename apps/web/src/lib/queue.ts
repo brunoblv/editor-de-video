@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { RENDER_QUEUE, redisConnection, type RenderJobData } from '@editor-video/core';
+import { RENDER_QUEUE, config, redisConnection, type RenderJobData } from '@editor-video/core';
 
 // Mesmo motivo do singleton do Prisma: o hot reload do Next recriaria conexões.
 const globalForQueue = globalThis as unknown as { renderQueue?: Queue<RenderJobData> };
@@ -9,7 +9,7 @@ export const renderQueue: Queue<RenderJobData> =
   new Queue<RenderJobData>(RENDER_QUEUE, {
     connection: redisConnection(),
     defaultJobOptions: {
-      attempts: 2,
+      attempts: config.ambient.maxRetries,
       backoff: { type: 'exponential', delay: 10_000 },
       removeOnComplete: { count: 50 },
       removeOnFail: { count: 50 },

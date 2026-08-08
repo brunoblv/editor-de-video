@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { NextRequest } from 'next/server';
 import { config, getStorage, storageKeys } from '@editor-video/core';
 import { prisma, ProjectStatus } from '@editor-video/db';
+import { requireProjectAccess } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id: projectId } = await params;
+    await requireProjectAccess(projectId);
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
           originalName: file.name,
           sizeByte: file.size,
           sourceKey: 'pending',
-          maxDurationSec: 15,
+          maxDurationSec: config.limits.maxClipDurationSec,
         },
       });
 

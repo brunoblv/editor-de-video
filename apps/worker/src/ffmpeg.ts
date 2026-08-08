@@ -48,8 +48,21 @@ export function runFfmpeg(
       );
     });
     child.on('close', (code) => {
-      if (code === 0) resolve({ stdout, stderr });
-      else reject(new Error(`${bin} saiu com código ${code}:\n${stderr}`));
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      // Windows devolve códigos negativos como unsigned (ex.: -28 → 4294967268).
+      const signed =
+        typeof code === 'number' && code > 0x7fffffff ? code - 0x100000000 : code;
+      let hint = '';
+      if (signed === -28 || /No space left|ENOSPC|not enough space/i.test(stderr)) {
+        hint =
+          '\nProvável causa: disco cheio (ENOSPC). Libere espaço em tmp/storage e tente de novo.';
+      } else if (signed === -22 || /Invalid argument/i.test(stderr)) {
+        hint = '\nArgumento inválido no FFmpeg — verifique filtros/codecs.';
+      }
+      reject(new Error(`${bin} saiu com código ${signed ?? code}:${hint}\n${stderr}`));
     });
   });
 }

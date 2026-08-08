@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { config, getStorage } from '@editor-video/core';
 import { prisma } from '@editor-video/db';
+import { requireProjectAccess } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,10 @@ interface PatchBody {
 export async function PATCH(request: NextRequest, { params }: Params): Promise<Response> {
   return handle(async () => {
     const { id } = await params;
+    const existing = await prisma.clip.findUnique({ where: { id } });
+    if (!existing) throw new ApiError('Clipe não encontrado.', 404);
+    await requireProjectAccess(existing.projectId);
+
     const body = (await request.json()) as PatchBody;
     const data: { label?: string | null; maxDurationSec?: number; transcribe?: boolean } = {};
 
@@ -52,6 +57,7 @@ export async function DELETE(_request: NextRequest, { params }: Params): Promise
     const { id } = await params;
     const clip = await prisma.clip.findUnique({ where: { id } });
     if (!clip) throw new ApiError('Clipe não encontrado.', 404);
+    await requireProjectAccess(clip.projectId);
 
     const storage = getStorage();
     await prisma.clip.delete({ where: { id } });

@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { config } from '@editor-video/core';
 import { prisma, ProjectKind } from '@editor-video/db';
+import { auth } from '@/auth';
 import { AmbientEditor } from '@/components/AmbientEditor';
 import { CuriosidadeEditor } from '@/components/CuriosidadeEditor';
 import { ProjectEditor } from '@/components/ProjectEditor';
@@ -9,6 +10,9 @@ import { toProjectDTO } from '@/lib/dto';
 export const dynamic = 'force-dynamic';
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+
   const { id } = await params;
 
   const project = await prisma.project.findUnique({
@@ -18,7 +22,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       mediaAssets: { orderBy: { position: 'asc' } },
     },
   });
-  if (!project) notFound();
+  if (!project || project.userId !== session.user.id) notFound();
 
   const dto = toProjectDTO(project);
 

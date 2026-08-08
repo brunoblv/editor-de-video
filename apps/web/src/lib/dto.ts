@@ -51,6 +51,16 @@ export interface ProjectDTO {
   qualityJson: unknown;
   previewKey: string | null;
   metadataJson: unknown;
+  recipeId: string | null;
+  recipeVersion: number | null;
+  universe: string | null;
+  variationId: string | null;
+  seriesId: string | null;
+  seriesEpisode: number | null;
+  youtubeVideoId: string | null;
+  youtubeShortId: string | null;
+  youtubePlaylistIds: string[];
+  publishedAt: string | null;
   clips: ClipDTO[];
   mediaAssets: MediaAssetDTO[];
 }
@@ -87,6 +97,16 @@ export function toProjectDTO(
     qualityJson: project.qualityJson ?? null,
     previewKey: project.previewKey ?? null,
     metadataJson: project.metadataJson ?? null,
+    recipeId: project.recipeId ?? null,
+    recipeVersion: project.recipeVersion ?? null,
+    universe: project.universe ?? null,
+    variationId: project.variationId ?? null,
+    seriesId: project.seriesId ?? null,
+    seriesEpisode: project.seriesEpisode ?? null,
+    youtubeVideoId: project.youtubeVideoId ?? null,
+    youtubeShortId: project.youtubeShortId ?? null,
+    youtubePlaylistIds: project.youtubePlaylistIds ?? [],
+    publishedAt: project.publishedAt ? project.publishedAt.toISOString() : null,
     clips: project.clips.map((clip) => ({
       id: clip.id,
       position: clip.position,
@@ -118,13 +138,14 @@ export const STATUS_LABEL: Record<string, string> = {
   WAITING_PREVIEW_APPROVAL: 'Aguardando preview',
   READY: 'Pronto',
   READY_FOR_REVIEW: 'Aguardando revisão',
+  PUBLISHED: 'Publicado',
   FAILED: 'Falhou',
 };
 
 export const KIND_LABEL: Record<string, string> = {
   TOP_LIST: 'Top List',
   CURIOSIDADE: 'Curiosidade',
-  AMBIENT: 'Sons relaxantes',
+  AMBIENT: 'Midnight Ambient',
 };
 
 export function fileUrl(key: string, download = false): string {
