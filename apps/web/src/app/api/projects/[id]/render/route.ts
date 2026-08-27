@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { config } from '@editor-video/core';
+import { config } from '@editor-video/core/server';
 import { prisma, ProjectKind, ProjectStatus } from '@editor-video/db';
 import { requireProjectAccess } from '@/lib/auth-guards';
 import { renderQueue } from '@/lib/queue';
@@ -32,6 +32,8 @@ export async function POST(_request: NextRequest, { params }: Params): Promise<R
       if (!project.topic?.trim()) {
         throw new ApiError('Informe um tema antes de produzir.');
       }
+    } else if (project.kind === ProjectKind.CHRISTIAN) {
+      // Pilar é opcional na criação — o Content Planner escolhe um automaticamente no worker.
     } else {
       const { minClipsPerProject } = config.limits;
       if (project._count.clips < minClipsPerProject) {

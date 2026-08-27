@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
-import { getStorage, storageKeys } from '@editor-video/core';
+import { findPillar } from '@editor-video/core/christian';
+import { getStorage, storageKeys } from '@editor-video/core/server';
 import { prisma } from '@editor-video/db';
 import { requireProjectAccess } from '@/lib/auth-guards';
 import { toProjectDTO } from '@/lib/dto';
@@ -29,6 +30,7 @@ interface PatchBody {
   title?: unknown;
   watermark?: unknown;
   topic?: unknown;
+  pillar?: unknown;
 }
 
 export async function PATCH(request: NextRequest, { params }: Params): Promise<Response> {
@@ -36,7 +38,12 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
     const { id } = await params;
     await requireProjectAccess(id);
     const body = (await request.json()) as PatchBody;
-    const data: { title?: string; watermark?: string | null; topic?: string | null } = {};
+    const data: {
+      title?: string;
+      watermark?: string | null;
+      topic?: string | null;
+      pillar?: string | null;
+    } = {};
 
     if (typeof body.title === 'string') {
       const title = body.title.trim();
@@ -52,6 +59,13 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
       if (topic.length < 3) throw new ApiError('O tema precisa ter pelo menos 3 caracteres.');
       data.topic = topic;
       if (!data.title) data.title = topic.slice(0, 80);
+    }
+    if (typeof body.pillar === 'string') {
+      const pillar = body.pillar.trim();
+      if (pillar !== '' && !findPillar(pillar)) {
+        throw new ApiError('Pilar de conteúdo inválido.');
+      }
+      data.pillar = pillar === '' ? null : pillar;
     }
 
     const project = await prisma.project.update({

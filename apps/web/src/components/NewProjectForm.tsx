@@ -2,14 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { PILLARS } from '@editor-video/core/christian';
 
-type Mode = 'TOP_LIST' | 'CURIOSIDADE';
+type Mode = 'TOP_LIST' | 'CURIOSIDADE' | 'CHRISTIAN';
 
 export function NewProjectForm() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('CURIOSIDADE');
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
+  const [pillar, setPillar] = useState('');
   const [watermark, setWatermark] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -23,7 +25,9 @@ export function NewProjectForm() {
       const body =
         mode === 'CURIOSIDADE'
           ? { kind: 'CURIOSIDADE', topic, watermark }
-          : { kind: 'TOP_LIST', title, watermark };
+          : mode === 'CHRISTIAN'
+            ? { kind: 'CHRISTIAN', pillar, watermark }
+            : { kind: 'TOP_LIST', title, watermark };
 
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -42,7 +46,11 @@ export function NewProjectForm() {
   }
 
   const canSubmit =
-    mode === 'CURIOSIDADE' ? topic.trim().length >= 3 : title.trim().length >= 3;
+    mode === 'CURIOSIDADE'
+      ? topic.trim().length >= 3
+      : mode === 'CHRISTIAN'
+        ? true
+        : title.trim().length >= 3;
 
   return (
     <form className="card" onSubmit={onSubmit}>
@@ -64,9 +72,32 @@ export function NewProjectForm() {
         >
           Top List
         </button>
+        <button
+          type="button"
+          className={mode === 'CHRISTIAN' ? 'primary' : 'ghost'}
+          onClick={() => setMode('CHRISTIAN')}
+        >
+          Canal Cristão
+        </button>
       </div>
 
-      {mode === 'CURIOSIDADE' ? (
+      {mode === 'CHRISTIAN' ? (
+        <div>
+          <label htmlFor="pillar">Pilar de conteúdo (opcional)</label>
+          <select id="pillar" value={pillar} onChange={(event) => setPillar(event.target.value)}>
+            <option value="">Deixar o sistema escolher automaticamente</option>
+            {PILLARS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontSize: 13 }}>
+            O sistema busca versículo, gera roteiro com Gemini, narração, legendas e o personagem
+            visual sozinho.
+          </p>
+        </div>
+      ) : mode === 'CURIOSIDADE' ? (
         <div>
           <label htmlFor="topic">Tema</label>
           <input

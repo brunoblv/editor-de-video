@@ -19,7 +19,9 @@
     "dev:worker": "npm run dev -w @editor-video/worker",
     "studio": "npm run studio -w @editor-video/db",
     "remotion:studio": "npm run studio -w @editor-video/video",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "christian:seed-bible": "npm run christian:seed-bible -w @editor-video/worker",
+    "generate:daily": "npm run christian:generate-daily -w @editor-video/worker"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",

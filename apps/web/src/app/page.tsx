@@ -1,5 +1,6 @@
 import { prisma } from '@editor-video/db';
 import { auth } from '@/auth';
+import { ChristianBatchForm } from '@/components/ChristianBatchForm';
 import { NewProjectForm } from '@/components/NewProjectForm';
 import { KIND_LABEL, STATUS_LABEL } from '@/lib/dto';
 import { redirect } from 'next/navigation';
@@ -25,6 +26,7 @@ export default async function HomePage() {
       </p>
 
       <NewProjectForm />
+      <ChristianBatchForm />
 
       <section style={{ marginTop: 32 }}>
         <h2>Projetos</h2>
@@ -37,7 +39,7 @@ export default async function HomePage() {
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>{project.title}</div>
                 <div className="muted">
                   {KIND_LABEL[project.kind] ?? project.kind}
-                  {project.kind === 'CURIOSIDADE'
+                  {project.kind === 'CURIOSIDADE' || project.kind === 'CHRISTIAN'
                     ? ` · ${project._count.mediaAssets} mídia${project._count.mediaAssets === 1 ? '' : 's'}`
                     : project.kind === 'AMBIENT'
                       ? ` · ${project.durationMinutes ?? '—'} min`

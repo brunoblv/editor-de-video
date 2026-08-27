@@ -1,4 +1,6 @@
 import type { NextRequest } from 'next/server';
+import { findPillar } from '@editor-video/core/christian';
+import { config } from '@editor-video/core/server';
 import { prisma, ProjectKind } from '@editor-video/db';
 import { requireUser } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
@@ -22,6 +24,7 @@ interface CreateBody {
   watermark?: unknown;
   kind?: unknown;
   topic?: unknown;
+  pillar?: unknown;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -32,8 +35,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     const watermark = watermarkRaw === '' ? null : watermarkRaw;
 
     const kindRaw = typeof body.kind === 'string' ? body.kind : 'TOP_LIST';
-    if (kindRaw !== 'TOP_LIST' && kindRaw !== 'CURIOSIDADE') {
+    if (kindRaw !== 'TOP_LIST' && kindRaw !== 'CURIOSIDADE' && kindRaw !== 'CHRISTIAN') {
       throw new ApiError('Tipo de projeto inválido.');
+    }
+
+    if (kindRaw === 'CHRISTIAN') {
+      const pillarRaw = typeof body.pillar === 'string' ? body.pillar.trim() : '';
+      const pillar = pillarRaw === '' ? null : pillarRaw;
+      if (pillar && !findPillar(pillar)) {
+        throw new ApiError('Pilar de conteúdo inválido.');
+      }
+
+      const project = await prisma.project.create({
+        data: {
+          kind: ProjectKind.CHRISTIAN,
+          title: pillar ? (findPillar(pillar)?.label ?? 'Canal Cristão') : 'Canal Cristão (a definir)',
+          pillar,
+          watermark: watermark ?? (config.christian.youtubeHandle || null),
+          userId: user.id,
+        },
+      });
+      return json({ project }, 201);
     }
 
     if (kindRaw === 'CURIOSIDADE') {

@@ -1,4 +1,11 @@
+/**
+ * Barrel Node completo (`config`/`storage`/`queue` + midnight/types).
+ * No browser, o package.json resolve para `browser.js` (sem APIs Node).
+ * Client Components preferem `@editor-video/core/midnight` ou `/render`.
+ * Código server-only pode usar `@editor-video/core/server` para deixar a intenção explícita.
+ */
 export { config, repoRoot, type AppConfig } from './config.js';
+export { PILLARS, WEEKDAY_CATEGORIES, findPillar, type Pillar } from './christian.js';
 export {
   getStorage,
   storageKeys,
@@ -9,6 +16,7 @@ export {
   COUNTDOWN_DURATION_FRAMES,
   INTRO_DURATION_FRAMES,
   OUTRO_DURATION_FRAMES,
+  christianDurationInFrames,
   curiosidadeDurationInFrames,
   totalDurationInFrames,
   type AmbientAudioLayer,
@@ -20,6 +28,9 @@ export {
   type AmbientVisualTimeline,
   type CaptionSegment,
   type CaptionWord,
+  type CharacterState,
+  type ChristianProps,
+  type ChristianScene,
   type CuriosidadeProps,
   type CuriosidadeScene,
   type ProjectKindValue,

@@ -8,6 +8,7 @@ import {
 import { prisma, ProjectKind } from '@editor-video/db';
 import { runAmbientPipeline } from './ambient/pipeline.js';
 import { reanalyzeSoundAsset } from './ambient/sound-analyzer.js';
+import { runChristianPipeline } from './christian/pipeline.js';
 import { assertFfmpegAvailable } from './ffmpeg.js';
 import { markProjectFailed, runRenderPipeline } from './pipeline.js';
 import { runCuriosidadePipeline } from './v2/pipeline-curiosidade.js';
@@ -45,6 +46,8 @@ async function main(): Promise<void> {
         await runCuriosidadePipeline(projectId);
       } else if (project.kind === ProjectKind.AMBIENT) {
         await runAmbientPipeline(projectId, job.data.ambientMode ?? 'preview');
+      } else if (project.kind === ProjectKind.CHRISTIAN) {
+        await runChristianPipeline(projectId);
       } else {
         await runRenderPipeline(projectId);
       }

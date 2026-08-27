@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Readable } from 'node:stream';
 import type { NextRequest } from 'next/server';
-import { getStorage } from '@editor-video/core';
+import { getStorage } from '@editor-video/core/server';
 import { requireStorageKeyAccess } from '@/lib/auth-guards';
 import { ApiError, handle } from '@/lib/http';
 

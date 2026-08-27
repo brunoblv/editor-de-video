@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
-import type { AmbientRenderMode } from '@editor-video/core';
-import { config } from '@editor-video/core';
+import type { AmbientRenderMode } from '@editor-video/core/server';
+import { config } from '@editor-video/core/server';
 import { prisma, ProjectKind, ProjectStatus } from '@editor-video/db';
 import { requireProjectAccess } from '@/lib/auth-guards';
 import { renderQueue } from '@/lib/queue';

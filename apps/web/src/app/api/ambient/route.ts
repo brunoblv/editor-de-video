@@ -2,12 +2,12 @@ import type { NextRequest } from 'next/server';
 import { Prisma } from '@prisma/client';
 import {
   buildMidnightTitle,
-  config,
   getMidnightRecipe,
   getMidnightVariation,
   MIDNIGHT_RECIPE_VERSION,
   MIDNIGHT_PIPELINE_VERSION,
-} from '@editor-video/core';
+} from '@editor-video/core/midnight';
+import { config } from '@editor-video/core/server';
 import { prisma, ProjectKind, ProjectStatus } from '@editor-video/db';
 import { requireUser } from '@/lib/auth-guards';
 import { renderQueue } from '@/lib/queue';

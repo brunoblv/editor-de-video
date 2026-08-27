@@ -8,11 +8,24 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "browser": "./dist/browser.js",
       "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
     },
     "./midnight": {
       "types": "./dist/midnight.d.ts",
       "default": "./dist/midnight.js"
+    },
+    "./christian": {
+      "types": "./dist/christian.d.ts",
+      "default": "./dist/christian.js"
     },
     "./render": {
       "types": "./dist/types.d.ts",

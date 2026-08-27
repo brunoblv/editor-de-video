@@ -72,6 +72,10 @@ export const config = {
     bin: str('PIPER_BIN', 'piper'),
     /** Caminho do modelo .onnx (ex.: ./models/pt_BR-faber-medium.onnx). */
     model: str('PIPER_MODEL', ''),
+    /** >1 = fala mais devagar (docs/Cristão/projeto.md §18 — voz calma/contemplativa). */
+    lengthScale: num('PIPER_LENGTH_SCALE', 1.15),
+    /** Segundos de silêncio após cada frase — pausas mais naturais entre ideias. */
+    sentenceSilence: num('PIPER_SENTENCE_SILENCE', 0.5),
   },
   curiosidade: {
     minDurationSec: num('CURIOSIDADE_MIN_DURATION_SEC', 25),
@@ -96,6 +100,30 @@ export const config = {
     sleepMinDurationMinutes: num('AMBIENT_SLEEP_MIN_DURATION_MIN', 60),
     sleepMaxDurationMinutes: num('AMBIENT_SLEEP_MAX_DURATION_MIN', 600),
     cozyFocusMaxDurationMinutes: num('AMBIENT_COZY_FOCUS_MAX_DURATION_MIN', 180),
+  },
+  voiceDirector: {
+    /** Kill switch — false volta pro caminho antigo (narração única, sem segmentação). */
+    enabled: bool('ENABLE_VOICE_DIRECTION', true),
+    /** 'gemini' tenta Gemini TTS primeiro e cai para Piper em falha/cota; 'piper' usa só o local. */
+    provider: str('TTS_PROVIDER', 'gemini'),
+    /** Voz masculina fixa (consistência com o modelo Piper pt_BR-faber-medium, também masculino). */
+    geminiVoiceName: str('GEMINI_TTS_VOICE', 'Orus'),
+    geminiModel: str('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+  },
+  christian: {
+    geminiApiKey: str('GEMINI_API_KEY', ''),
+    geminiModel: str('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    /** Dias mínimos antes de reutilizar o mesmo versículo. */
+    verseReuseDays: num('VERSE_REUSE_DAYS', 180),
+    /** Dias mínimos antes de reutilizar o mesmo pilar de conteúdo. */
+    themeReuseDays: num('THEME_REUSE_DAYS', 14),
+    minDurationSec: num('CHRISTIAN_MIN_DURATION_SEC', 30),
+    maxDurationSec: num('CHRISTIAN_MAX_DURATION_SEC', 60),
+    visualQueries: num('CHRISTIAN_VISUAL_QUERIES', 5),
+    /** userId usado por scripts de automação (generate:daily) sem sessão HTTP. */
+    automationUserId: str('CHRISTIAN_AUTOMATION_USER_ID', ''),
+    /** Handle do canal (ex.: "@minutodefe56") — usado como watermark padrão. */
+    youtubeHandle: str('CHRISTIAN_YOUTUBE_HANDLE', ''),
   },
   auth: {
     secret: str('AUTH_SECRET', str('NEXTAUTH_SECRET', '')),

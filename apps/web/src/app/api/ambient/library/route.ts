@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { NextRequest } from 'next/server';
-import { getStorage, storageKeys } from '@editor-video/core';
+import { getStorage, storageKeys } from '@editor-video/core/server';
 import { LicenseVerdict, prisma } from '@editor-video/db';
 import { requireUser } from '@/lib/auth-guards';
 import { evaluateLicense } from '@/lib/license-guard';

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "christian:seed-bible": "tsx src/christian/seed-bible.ts",
+    "christian:generate-daily": "tsx src/christian/generate-daily.ts"
   },
   "dependencies": {
     "@editor-video/core": "*",

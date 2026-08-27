@@ -1,7 +1,13 @@
 import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { ensureBrowser, renderMedia, selectComposition } from '@remotion/renderer';
-import { config, repoRoot, type CuriosidadeProps, type TopListProps } from '@editor-video/core';
+import {
+  config,
+  repoRoot,
+  type ChristianProps,
+  type CuriosidadeProps,
+  type TopListProps,
+} from '@editor-video/core';
 import { logger } from './logger.js';
 
 const log = logger('render');
@@ -9,6 +15,7 @@ const log = logger('render');
 const ENTRY_POINT = path.join(repoRoot, 'packages', 'video', 'src', 'index.ts');
 const TOP_LIST_ID = 'TopList';
 const CURIOSIDADE_ID = 'Curiosidade';
+const CHRISTIAN_ID = 'Christian';
 
 let bundlePromise: Promise<string> | null = null;
 
@@ -85,4 +92,12 @@ export async function renderCuriosidade(opts: {
   onProgress?: (ratio: number) => void;
 }): Promise<void> {
   await renderComposition(CURIOSIDADE_ID, opts.props, opts.outputPath, opts.onProgress);
+}
+
+export async function renderChristian(opts: {
+  props: ChristianProps;
+  outputPath: string;
+  onProgress?: (ratio: number) => void;
+}): Promise<void> {
+  await renderComposition(CHRISTIAN_ID, opts.props, opts.outputPath, opts.onProgress);
 }

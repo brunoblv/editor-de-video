@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { NextRequest } from 'next/server';
-import { config, getStorage, storageKeys } from '@editor-video/core';
+import { config, getStorage, storageKeys } from '@editor-video/core/server';
 import { prisma, ProjectStatus } from '@editor-video/db';
 import { requireProjectAccess } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';

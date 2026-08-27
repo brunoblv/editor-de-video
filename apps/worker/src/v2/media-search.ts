@@ -87,7 +87,8 @@ async function searchPixabay(query: string): Promise<StockHit[]> {
 
   const url = new URL('https://pixabay.com/api/videos/');
   url.searchParams.set('key', key);
-  url.searchParams.set('q', query);
+  // A API do Pixabay rejeita (400) qualquer "q" acima de 100 caracteres.
+  url.searchParams.set('q', query.slice(0, 100));
   url.searchParams.set('per_page', '10');
   url.searchParams.set('safesearch', 'true');
 

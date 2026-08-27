@@ -11,6 +11,7 @@ enum ProjectKind {
   TOP_LIST
   CURIOSIDADE
   AMBIENT
+  CHRISTIAN
 }
 
 enum ProjectStatus {
@@ -101,6 +102,22 @@ model Project {
   /// Key do WAV de narração no storage
   voiceoverKey String?
 
+  /// --- Canal Cristão ---
+  /// Pilar de conteúdo selecionado (ex: "verse_of_day", "prayer_protection")
+  pillar String?
+  /// Versículo bíblico usado nesta peça (biblioteca local, nunca gerado por LLM)
+  verseId String?
+  bibleVerse BibleVerse? @relation(fields: [verseId], references: [id], onDelete: SetNull)
+  /// Resultado do safety checker (regras de saúde/editoriais)
+  safetyJson Json?
+  /// Estado visual do personagem (colorLevel/lightLevel/detailLevel/emotion/pose)
+  characterStateJson Json?
+  /// Roteiro segmentado pelo Voice Director (emoção/ritmo/pausa por trecho) + provider usado
+  voiceScriptJson Json?
+  /// Horário-alvo de publicação (geração em lote) — quando setado, o worker
+  /// publica automaticamente no YouTube (agendado) assim que o render terminar.
+  scheduledAt DateTime?
+
   /// 0-100, atualizado pelo worker durante o processamento
   progress Int @default(0)
   /// Etapa legível em andamento (ex: "Normalizando clipe 2/5")
@@ -163,6 +180,33 @@ model Project {
   @@index([recipeId])
   @@index([universe])
   @@index([youtubeVideoId])
+  @@index([verseId])
+  @@index([pillar])
+  @@index([scheduledAt])
+}
+
+/// Biblioteca bíblica local (módulo Canal Cristão) — nunca depender do LLM
+/// para reproduzir texto de escritura, só para refletir sobre ele.
+model BibleVerse {
+  id          String   @id @default(cuid())
+  book        String
+  chapter     Int
+  verse       String
+  text        String
+  translation String   @default("ARC")
+  /// Tags temáticas para seleção contextual (ex: ["esperanca", "ansiedade"])
+  themes      String[] @default([])
+  firstUsedAt DateTime?
+  lastUsedAt  DateTime?
+  usageCount  Int      @default(0)
+
+  projects Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([book, chapter, verse, translation])
+  @@index([lastUsedAt])
 }
 
 model Clip {

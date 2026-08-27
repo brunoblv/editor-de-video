@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { config, getStorage } from '@editor-video/core';
+import { config, getStorage } from '@editor-video/core/server';
 import { prisma } from '@editor-video/db';
 import { requireProjectAccess } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';

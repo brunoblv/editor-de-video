@@ -30,6 +30,8 @@ export interface ProjectDTO {
   status: string;
   kind: string;
   topic: string | null;
+  pillar: string | null;
+  scheduledAt: string | null;
   progress: number;
   stage: string | null;
   errorMessage: string | null;
@@ -76,6 +78,8 @@ export function toProjectDTO(
     status: project.status,
     kind: project.kind,
     topic: project.topic,
+    pillar: project.pillar ?? null,
+    scheduledAt: project.scheduledAt ? project.scheduledAt.toISOString() : null,
     progress: project.progress,
     stage: project.stage,
     errorMessage: project.errorMessage,
@@ -146,6 +150,7 @@ export const KIND_LABEL: Record<string, string> = {
   TOP_LIST: 'Top List',
   CURIOSIDADE: 'Curiosidade',
   AMBIENT: 'Midnight Ambient',
+  CHRISTIAN: 'Canal Cristão',
 };
 
 export function fileUrl(key: string, download = false): string {

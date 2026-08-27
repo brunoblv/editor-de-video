@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server';
 import fsp from 'node:fs/promises';
 import { Prisma } from '@prisma/client';
-import { getStorage, storageKeys, type MidnightPlaylistKey } from '@editor-video/core';
+import { getStorage, storageKeys } from '@editor-video/core/server';
+import type { MidnightPlaylistKey } from '@editor-video/core/midnight';
 import { prisma, ProjectKind, ProjectStatus } from '@editor-video/db';
 import { requireProjectAccess, requireUser } from '@/lib/auth-guards';
 import { toProjectDTO } from '@/lib/dto';
@@ -41,8 +42,8 @@ export async function POST(request: NextRequest, { params }: Params): Promise<Re
 
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new ApiError('Projeto não encontrado.', 404);
-    if (project.kind !== ProjectKind.AMBIENT) {
-      throw new ApiError('Só projetos Ambient podem ser publicados no YouTube.');
+    if (project.kind !== ProjectKind.AMBIENT && project.kind !== ProjectKind.CHRISTIAN) {
+      throw new ApiError('Só projetos Ambient ou Canal Cristão podem ser publicados no YouTube.');
     }
     if (
       project.status !== ProjectStatus.READY_FOR_REVIEW &&

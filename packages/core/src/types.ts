@@ -63,7 +63,7 @@ export type ProjectStatusValue =
   | 'PUBLISHED'
   | 'FAILED';
 
-export type ProjectKindValue = 'TOP_LIST' | 'CURIOSIDADE' | 'AMBIENT';
+export type ProjectKindValue = 'TOP_LIST' | 'CURIOSIDADE' | 'AMBIENT' | 'CHRISTIAN';
 
 export type AmbientPurpose = 'sleep' | 'relax' | 'study' | 'immersive';
 
@@ -154,5 +154,44 @@ export type CuriosidadeProps = {
 };
 
 export function curiosidadeDurationInFrames(props: CuriosidadeProps): number {
+  return props.scenes.reduce((acc, scene) => acc + scene.durationInFrames, 0);
+}
+
+/** Estado visual do personagem central (metáfora de transformação espiritual). */
+export type CharacterState = {
+  /** 0 = quase sem cor, 1 = cores completas. */
+  colorLevel: number;
+  /** 0 = iluminação mínima, 1 = totalmente iluminado. */
+  lightLevel: number;
+  /** 0 = silhueta vazia, 1 = detalhes completos. */
+  detailLevel: number;
+  emotion: 'sad' | 'calm' | 'hopeful' | 'joyful' | 'peaceful';
+  pose: 'standing' | 'sitting' | 'kneeling' | 'walking' | 'looking_up';
+  environment: 'dark_room' | 'window' | 'path' | 'field' | 'sunrise';
+  particles: boolean;
+};
+
+export type ChristianScene = {
+  src: string;
+  durationInFrames: number;
+};
+
+export type ChristianProps = {
+  title: string;
+  watermark: string | null;
+  pillarLabel: string;
+  hookText: string;
+  verse: { reference: string; text: string } | null;
+  reflectionText: string;
+  ctaText: string;
+  voiceoverUrl: string;
+  scenes: ChristianScene[];
+  captions: CaptionSegment[];
+  /** Estado inicial e final do personagem — interpola linearmente ao longo do vídeo. */
+  characterStart: CharacterState;
+  characterEnd: CharacterState;
+};
+
+export function christianDurationInFrames(props: ChristianProps): number {
   return props.scenes.reduce((acc, scene) => acc + scene.durationInFrames, 0);
 }

@@ -1,8 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
-import { config } from '@editor-video/core';
+import { config } from '@editor-video/core/server';
 import { prisma, ProjectKind } from '@editor-video/db';
 import { auth } from '@/auth';
 import { AmbientEditor } from '@/components/AmbientEditor';
+import { ChristianEditor } from '@/components/ChristianEditor';
 import { CuriosidadeEditor } from '@/components/CuriosidadeEditor';
 import { ProjectEditor } from '@/components/ProjectEditor';
 import { toProjectDTO } from '@/lib/dto';
@@ -32,6 +33,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   if (project.kind === ProjectKind.AMBIENT) {
     return <AmbientEditor initialProject={dto} />;
+  }
+
+  if (project.kind === ProjectKind.CHRISTIAN) {
+    return <ChristianEditor initialProject={dto} />;
   }
 
   return (
