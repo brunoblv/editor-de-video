@@ -20,6 +20,7 @@ import { directScript } from '../voice/director.js';
 import { mapVoiceMood } from '../voice/profiles.js';
 import { synthesizeDirectedScript } from '../voice/synth.js';
 import { pickFallbackCta } from './cta.js';
+import { pickRandomTrack } from './music.js';
 import { computeCharacterStates, nextEpisodeNumber } from './character.js';
 import { generateContent } from './gemini.js';
 import { selectPillar } from './planner.js';
@@ -286,6 +287,14 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
     const voiceFileName = 'voiceover.wav';
     await fsp.copyFile(voiceoverPath, path.join(assetsDir, voiceFileName));
 
+    const musicTrackPath = await pickRandomTrack();
+    let musicUrl: string | null = null;
+    if (musicTrackPath) {
+      const musicFileName = `music${path.extname(musicTrackPath)}`;
+      await fsp.copyFile(musicTrackPath, path.join(assetsDir, musicFileName));
+      musicUrl = `${assets.baseUrl}/${musicFileName}`;
+    }
+
     const props: ChristianProps = {
       title: content.title,
       watermark: project.watermark,
@@ -295,6 +304,8 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
       reflectionText: reflection,
       ctaText,
       voiceoverUrl: `${assets.baseUrl}/${voiceFileName}`,
+      musicUrl,
+      musicVolume: config.music.volume,
       scenes,
       captions,
       characterStart,

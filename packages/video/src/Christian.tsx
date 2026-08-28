@@ -73,6 +73,8 @@ export const Christian: React.FC<ChristianProps> = ({
   verse,
   ctaText,
   voiceoverUrl,
+  musicUrl,
+  musicVolume,
   scenes,
   captions,
 }) => {
@@ -108,6 +110,20 @@ export const Christian: React.FC<ChristianProps> = ({
       })}
 
       {voiceoverUrl ? <Audio src={voiceoverUrl} /> : null}
+
+      {musicUrl ? (
+        <Audio
+          src={musicUrl}
+          loop
+          volume={(frame) =>
+            musicVolume *
+            interpolate(frame, [0, 30, Math.max(31, total - 45), total], [0, 1, 1, 0], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            })
+          }
+        />
+      ) : null}
 
       {verse ? (
         <Sequence from={0} durationInFrames={Math.min(VERSE_CARD_FRAMES, total)}>

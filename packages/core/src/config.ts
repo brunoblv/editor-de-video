@@ -110,6 +110,12 @@ export const config = {
     geminiVoiceName: str('GEMINI_TTS_VOICE', 'Orus'),
     geminiModel: str('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
   },
+  music: {
+    /** Pasta com faixas instrumentais royalty-free (.mp3/.wav/.m4a/.ogg), relativa à raiz do monorepo. */
+    dir: str('MUSIC_DIR', 'music'),
+    /** Volume relativo da trilha (0–1) — baixo o suficiente pra não competir com a narração. */
+    volume: num('MUSIC_VOLUME', 0.06),
+  },
   christian: {
     geminiApiKey: str('GEMINI_API_KEY', ''),
     geminiModel: str('GEMINI_MODEL', 'gemini-3.5-flash-lite'),

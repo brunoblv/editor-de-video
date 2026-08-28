@@ -50,6 +50,8 @@ const defaultChristian: ChristianProps = {
   reflectionText: '',
   ctaText: 'Se essa mensagem falou com você, compartilhe com alguém.',
   voiceoverUrl: '',
+  musicUrl: null,
+  musicVolume: 0.06,
   scenes: [
     { src: '', durationInFrames: 150 },
     { src: '', durationInFrames: 150 },

@@ -185,6 +185,8 @@ export type ChristianProps = {
   reflectionText: string;
   ctaText: string;
   voiceoverUrl: string;
+  musicUrl: string | null;
+  musicVolume: number;
   scenes: ChristianScene[];
   captions: CaptionSegment[];
   /** Estado inicial e final do personagem — interpola linearmente ao longo do vídeo. */
