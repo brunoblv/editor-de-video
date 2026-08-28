@@ -94,12 +94,14 @@ export function segmentScript(
   }
 
   if (input.cta.trim()) {
+    // Usa o mesmo perfil/estilo do resto do texto — um estilo de fala
+    // diferente aqui força uma chamada de TTS separada e soa como outra voz.
     segments.push({
       text: input.cta.trim(),
-      emotion: 'warm',
+      emotion,
       lengthScale: profile.lengthScale,
-      styleInstruction: 'Fale com calor e naturalidade, como um convite gentil, sem parecer um anúncio',
-      intensity: 0.4,
+      styleInstruction: profile.styleInstruction,
+      intensity: profile.intensity,
       pauseAfterMs: 0,
       source: 'cta',
     });

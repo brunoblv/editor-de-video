@@ -40,11 +40,19 @@ async function concatWavs(parts: string[], outputWav: string, workDir: string): 
   await runFfmpeg('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outputWav]);
 }
 
+/**
+ * Agrupa por estilo de fala (emotion+styleInstruction), não por source —
+ * script/reflection/cta com o mesmo estilo viram uma única chamada ao Gemini
+ * TTS. Chamadas separadas para o mesmo estilo soam como vozes diferentes,
+ * já que a síntese generativa não é idêntica entre requisições.
+ */
 function groupBySource(segments: VoiceSegment[]): Array<{ source: SegmentSource; segments: VoiceSegment[] }> {
   const groups: Array<{ source: SegmentSource; segments: VoiceSegment[] }> = [];
   for (const segment of segments) {
     const last = groups[groups.length - 1];
-    if (last && last.source === segment.source) last.segments.push(segment);
+    const sameStyle =
+      last && last.segments[0]!.emotion === segment.emotion && last.segments[0]!.styleInstruction === segment.styleInstruction;
+    if (sameStyle) last!.segments.push(segment);
     else groups.push({ source: segment.source, segments: [segment] });
   }
   return groups;
