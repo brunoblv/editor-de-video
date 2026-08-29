@@ -123,8 +123,8 @@ export const config = {
     verseReuseDays: num('VERSE_REUSE_DAYS', 180),
     /** Dias mínimos antes de reutilizar o mesmo pilar de conteúdo. */
     themeReuseDays: num('THEME_REUSE_DAYS', 14),
-    minDurationSec: num('CHRISTIAN_MIN_DURATION_SEC', 30),
-    maxDurationSec: num('CHRISTIAN_MAX_DURATION_SEC', 60),
+    minDurationSec: num('CHRISTIAN_MIN_DURATION_SEC', 25),
+    maxDurationSec: num('CHRISTIAN_MAX_DURATION_SEC', 50),
     visualQueries: num('CHRISTIAN_VISUAL_QUERIES', 5),
     /** userId usado por scripts de automação (generate:daily) sem sessão HTTP. */
     automationUserId: str('CHRISTIAN_AUTOMATION_USER_ID', ''),
