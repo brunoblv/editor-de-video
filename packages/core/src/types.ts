@@ -28,7 +28,7 @@ export type RenderClip = {
   /** Texto de contexto opcional exibido sobre o clipe. */
   label: string | null;
   durationInFrames: number;
-  /** Legendas geradas por Whisper (opcional). */
+  /** Legendas geradas automaticamente (opcional). */
   captions?: CaptionSegment[];
 };
 

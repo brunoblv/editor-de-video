@@ -1,16 +1,11 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { config } from '@editor-video/core';
 import { runFfmpeg } from '../ffmpeg.js';
-import { logger } from '../logger.js';
-import { synthesizeSegmentWithPiper } from './providers/piper.js';
+import { prepareTextForSpeech } from './pronunciation.js';
 import { synthesizeGroupWithGeminiTts } from './providers/gemini-tts.js';
 import type { DirectedScript, SegmentSource, VoiceSegment } from './types.js';
 
-const log = logger('voice');
-
-/** Formato canônico de todos os trechos antes da concatenação — permite usar
- * "-c copy" no passo final não importa qual provider gerou cada trecho. */
+/** Formato canônico dos trechos antes da concatenação (permite `-c copy` no mux final). */
 const SAMPLE_RATE = 24000;
 
 async function resampleToCanonical(input: string, output: string): Promise<void> {
@@ -83,36 +78,12 @@ async function synthesizeWithGemini(script: DirectedScript, outputWav: string, w
   await concatWavs(parts, outputWav, workDir);
 }
 
-async function synthesizeWithPiper(script: DirectedScript, outputWav: string, workDir: string): Promise<void> {
-  const parts: string[] = [];
-
-  for (const [index, segment] of script.segments.entries()) {
-    const rawPath = path.join(workDir, `piper-seg-${index}.wav`);
-    await synthesizeSegmentWithPiper(segment, rawPath);
-
-    const canonicalPath = path.join(workDir, `piper-seg-${index}-16k.wav`);
-    await resampleToCanonical(rawPath, canonicalPath);
-    parts.push(canonicalPath);
-
-    if (segment.pauseAfterMs > 0) {
-      const silPath = path.join(workDir, `piper-sil-${index}.wav`);
-      await generateSilenceWav(silPath, segment.pauseAfterMs);
-      parts.push(silPath);
-    }
-  }
-
-  await concatWavs(parts, outputWav, workDir);
-}
-
 export interface SynthesizeResult {
-  provider: 'gemini' | 'piper';
+  provider: 'gemini';
 }
 
 /**
- * Sintetiza um DirectedScript num único WAV. Tenta Gemini TTS primeiro
- * (config.voiceDirector.provider === 'gemini'); qualquer falha (cota, rede,
- * resposta inválida) cai para o Piper local — o vídeo nunca é perdido por
- * indisponibilidade de um provider (docs/Cristão/projeto.md §49).
+ * Sintetiza um DirectedScript num único WAV via Gemini TTS.
  */
 export async function synthesizeDirectedScript(
   script: DirectedScript,
@@ -120,16 +91,36 @@ export async function synthesizeDirectedScript(
   workDir: string,
 ): Promise<SynthesizeResult> {
   await fsp.mkdir(workDir, { recursive: true });
+  await synthesizeWithGemini(script, outputWav, workDir);
+  return { provider: 'gemini' };
+}
 
-  if (config.voiceDirector.provider === 'gemini') {
-    try {
-      await synthesizeWithGemini(script, outputWav, workDir);
-      return { provider: 'gemini' };
-    } catch (err) {
-      log.warn(`Gemini TTS indisponível, usando Piper como fallback: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
+const CURIOSIDADE_STYLE =
+  'Fale em português do Brasil, tom curioso e envolvente, ritmo natural para vídeo curto vertical';
 
-  await synthesizeWithPiper(script, outputWav, workDir);
-  return { provider: 'piper' };
+/** Narração única (pipeline Curiosidade) via Gemini TTS. */
+export async function synthesizePlainNarration(
+  text: string,
+  outputWav: string,
+  workDir: string,
+  styleInstruction = CURIOSIDADE_STYLE,
+): Promise<void> {
+  await synthesizeDirectedScript(
+    {
+      profileUsed: 'curiosidade',
+      segments: [
+        {
+          text: prepareTextForSpeech(text),
+          emotion: 'warm',
+          lengthScale: 1,
+          styleInstruction,
+          intensity: 0.7,
+          pauseAfterMs: 0,
+          source: 'script',
+        },
+      ],
+    },
+    outputWav,
+    workDir,
+  );
 }

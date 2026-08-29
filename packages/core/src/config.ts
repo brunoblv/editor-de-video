@@ -51,18 +51,21 @@ export const config = {
   render: {
     concurrency: num('RENDER_CONCURRENCY', 1),
   },
+  captions: {
+    /** gemini (padrão) ou whisper. */
+    provider: str('CAPTIONS_PROVIDER', 'gemini'),
+    language: str('CAPTIONS_LANGUAGE', str('WHISPER_LANGUAGE', 'pt')),
+    /** Modelo multimodal — precisa aceitar áudio. Vazio herda GEMINI_MODEL. */
+    geminiModel: str('GEMINI_CAPTIONS_MODEL', str('GEMINI_MODEL', 'gemini-3.5-flash-lite')),
+  },
   whisper: {
-    /** Quando false, clipes com transcribe=true falham com mensagem clara. */
+    /** Fallback local quando CAPTIONS_PROVIDER=whisper ou o Gemini falha. */
     enabled: bool('WHISPER_ENABLED', true),
     /** Binário whisper.cpp no PATH (whisper-cli ou main). */
     bin: str('WHISPER_BIN', 'whisper-cli'),
     /** Caminho do modelo ggml (ex.: ./models/ggml-base.bin). */
     model: str('WHISPER_MODEL', ''),
     language: str('WHISPER_LANGUAGE', 'pt'),
-  },
-  ollama: {
-    baseUrl: str('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'),
-    model: str('OLLAMA_MODEL', 'llama3.2'),
   },
   media: {
     pexelsApiKey: str('PEXELS_API_KEY', ''),
@@ -104,9 +107,8 @@ export const config = {
   voiceDirector: {
     /** Kill switch — false volta pro caminho antigo (narração única, sem segmentação). */
     enabled: bool('ENABLE_VOICE_DIRECTION', true),
-    /** 'gemini' tenta Gemini TTS primeiro e cai para Piper em falha/cota; 'piper' usa só o local. */
+    /** Sempre Gemini TTS. */
     provider: str('TTS_PROVIDER', 'gemini'),
-    /** Voz masculina fixa (consistência com o modelo Piper pt_BR-faber-medium, também masculino). */
     geminiVoiceName: str('GEMINI_TTS_VOICE', 'Orus'),
     geminiModel: str('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
   },

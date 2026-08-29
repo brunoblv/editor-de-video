@@ -13,7 +13,7 @@ import { normalizeClip, probe } from '../ffmpeg.js';
 import { logger } from '../logger.js';
 import { renderChristian } from '../render.js';
 import { serveDirectory } from '../static-server.js';
-import { transcriptToCaptions, transcribeWav } from '../whisper.js';
+import { transcriptToCaptions, transcribeWav } from '../captions.js';
 import { downloadFile } from '../v2/download.js';
 import { searchBestStock } from '../v2/media-search.js';
 import { directScript } from '../voice/director.js';
@@ -61,14 +61,14 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
   const workDir = path.join(config.tmpDir, `christian-${projectId}`);
   const assetsDir = path.join(workDir, 'assets');
   const mediaDir = path.join(workDir, 'media');
-  const whisperDir = path.join(workDir, 'whisper');
+  const captionsDir = path.join(workDir, 'captions');
   const outputPath = path.join(workDir, 'final.mp4');
   const voiceoverPath = path.join(workDir, 'voiceover.wav');
 
   await fsp.rm(workDir, { recursive: true, force: true });
   await fsp.mkdir(assetsDir, { recursive: true });
   await fsp.mkdir(mediaDir, { recursive: true });
-  await fsp.mkdir(whisperDir, { recursive: true });
+  await fsp.mkdir(captionsDir, { recursive: true });
 
   const assets = await serveDirectory(assetsDir);
 
@@ -238,8 +238,7 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
       normalizedFiles.push(normalizedPath);
     }
 
-    // 6) Voice Director + TTS (Gemini TTS primário, Piper como fallback —
-    // docs/Cristão/projeto.md §17/§18)
+    // 6) Voice Director + Gemini TTS
     await setProgress(projectId, 50, 'Gerando narração');
     const directed = directScript(
       { script: content.script, reflection, cta: ctaText },
@@ -264,14 +263,21 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
     await storage.put(voiceoverKey, await fsp.readFile(voiceoverPath));
     await prisma.project.update({ where: { id: projectId }, data: { voiceoverKey } });
 
-    // 7) Legendas (Whisper)
+    // 7) Legendas (Gemini alinha a narração ao áudio)
     await setProgress(projectId, 62, 'Gerando legendas');
     let captions: CaptionSegment[] = [];
     try {
-      const transcript = await transcribeWav({ wavPath: voiceoverPath, workDir: whisperDir, id: 'voiceover' });
+      const hintText = directed.segments.map((segment) => segment.text).join(' ');
+      const transcript = await transcribeWav({
+        wavPath: voiceoverPath,
+        workDir: captionsDir,
+        id: 'voiceover',
+        hintText,
+        durationSec: voiceInfo.durationSec,
+      });
       captions = transcriptToCaptions(transcript, config.video.fps);
     } catch (err) {
-      log.error(`${projectId}: Whisper falhou — seguindo sem legendas`, err);
+      log.error(`${projectId}: legendas falharam — seguindo sem legendas`, err);
     }
 
     // 8) Monta cenas — margem de segurança no final pra never cortar a última

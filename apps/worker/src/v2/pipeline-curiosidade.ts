@@ -12,11 +12,11 @@ import { normalizeClip, probe } from '../ffmpeg.js';
 import { logger } from '../logger.js';
 import { renderCuriosidade } from '../render.js';
 import { serveDirectory } from '../static-server.js';
-import { transcriptToCaptions, transcribeWav } from '../whisper.js';
+import { synthesizePlainNarration } from '../voice/synth.js';
+import { transcriptToCaptions, transcribeWav } from '../captions.js';
 import { downloadFile } from './download.js';
 import { searchBestStock } from './media-search.js';
 import { generateScript } from './script.js';
-import { synthesizeSpeech } from './tts.js';
 
 const log = logger('curiosidade');
 
@@ -56,14 +56,14 @@ export async function runCuriosidadePipeline(projectId: string): Promise<void> {
   const workDir = path.join(config.tmpDir, `curiosidade-${projectId}`);
   const assetsDir = path.join(workDir, 'assets');
   const mediaDir = path.join(workDir, 'media');
-  const whisperDir = path.join(workDir, 'whisper');
+  const captionsDir = path.join(workDir, 'captions');
   const outputPath = path.join(workDir, 'final.mp4');
   const voiceoverPath = path.join(workDir, 'voiceover.wav');
 
   await fsp.rm(workDir, { recursive: true, force: true });
   await fsp.mkdir(assetsDir, { recursive: true });
   await fsp.mkdir(mediaDir, { recursive: true });
-  await fsp.mkdir(whisperDir, { recursive: true });
+  await fsp.mkdir(captionsDir, { recursive: true });
 
   const assets = await serveDirectory(assetsDir);
 
@@ -164,8 +164,8 @@ export async function runCuriosidadePipeline(projectId: string): Promise<void> {
 
     // 3) TTS
     await setProgress(projectId, 55, 'Gerando narração');
-    log.info(`${projectId}: Piper TTS`);
-    await synthesizeSpeech(script.narration, voiceoverPath);
+    log.info(`${projectId}: Gemini TTS`);
+    await synthesizePlainNarration(script.narration, voiceoverPath, path.join(workDir, 'voice-parts'));
     const voiceInfo = await probe(voiceoverPath);
     const voiceSec = Math.max(voiceInfo.durationSec, config.curiosidade.minDurationSec * 0.6);
     const voiceoverKey = storageKeys.voiceover(projectId);
@@ -175,19 +175,21 @@ export async function runCuriosidadePipeline(projectId: string): Promise<void> {
       data: { voiceoverKey },
     });
 
-    // 4) Legendas (Whisper no WAV)
+    // 4) Legendas (Gemini alinha a narração ao áudio)
     await setProgress(projectId, 68, 'Gerando legendas');
-    log.info(`${projectId}: Whisper na narração`);
+    log.info(`${projectId}: Gemini nas legendas`);
     let captions: CuriosidadeProps['captions'] = [];
     try {
       const transcript = await transcribeWav({
         wavPath: voiceoverPath,
-        workDir: whisperDir,
+        workDir: captionsDir,
         id: 'voiceover',
+        hintText: script.narration,
+        durationSec: voiceInfo.durationSec,
       });
       captions = transcriptToCaptions(transcript, config.video.fps);
     } catch (err) {
-      log.error(`${projectId}: Whisper falhou — seguindo sem legendas`, err);
+      log.error(`${projectId}: legendas falharam — seguindo sem legendas`, err);
     }
 
     // 5) Monta cenas com duração proporcional à narração

@@ -67,6 +67,15 @@ function run(bin: string, args: string[]): Promise<{ stdout: string; stderr: str
   });
 }
 
+export async function isWhisperReady(): Promise<boolean> {
+  try {
+    await assertWhisperReady();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function assertWhisperReady(): Promise<string> {
   if (!config.whisper.enabled) {
     throw new Error(

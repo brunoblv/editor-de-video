@@ -1,4 +1,7 @@
 import { config } from '@editor-video/core';
+import { logger } from '../logger.js';
+
+const log = logger('curiosidade-script');
 
 export type VisualNeed = {
   query: string;
@@ -17,10 +20,38 @@ export type GeneratedScript = {
   visualNeeds: VisualNeed[];
 };
 
-interface OllamaChatResponse {
-  message?: { content?: string };
-  response?: string;
+interface GeminiCandidatePart {
+  text?: string;
 }
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: GeminiCandidatePart[] } }>;
+}
+
+const SCRIPT_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    hook: { type: 'string' },
+    body: { type: 'string' },
+    payoff: { type: 'string' },
+    cta: { type: 'string' },
+    narration: { type: 'string' },
+    visualNeeds: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          startSec: { type: 'number' },
+          endSec: { type: 'number' },
+          text: { type: 'string' },
+        },
+        required: ['query', 'startSec', 'endSec', 'text'],
+      },
+    },
+  },
+  required: ['title', 'hook', 'body', 'payoff', 'cta', 'narration', 'visualNeeds'],
+} as const;
 
 function extractJson(text: string): unknown {
   const trimmed = text.trim();
@@ -93,8 +124,7 @@ function normalizeScript(raw: unknown, topic: string): GeneratedScript {
   };
 }
 
-/** Gera roteiro Curiosidade via Ollama (JSON). */
-export async function generateScript(topic: string): Promise<GeneratedScript> {
+function buildPrompts(topic: string): { system: string; user: string } {
   const min = config.curiosidade.minDurationSec;
   const max = config.curiosidade.maxDurationSec;
   const queries = config.curiosidade.visualQueries;
@@ -117,40 +147,56 @@ Regras:
 - visualNeeds: ${queries} itens com queries em inglês boas para Pexels/Pixabay.
 - Tom: curiosidade, claro, sem enrolação.`;
 
-  const user = `Tema: ${topic}`;
+  return { system, user: `Tema: ${topic}` };
+}
 
-  const url = `${config.ollama.baseUrl.replace(/\/$/, '')}/api/chat`;
+async function generateViaGemini(system: string, user: string): Promise<string> {
+  const apiKey = config.christian.geminiApiKey;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY não configurado no .env.');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.christian.geminiModel}:generateContent?key=${apiKey}`;
+
   let response: Response;
   try {
     response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: config.ollama.model,
-        stream: false,
-        format: 'json',
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: SCRIPT_RESPONSE_SCHEMA,
+          temperature: 0.9,
+        },
       }),
     });
   } catch (err) {
     throw new Error(
-      `Não foi possível conectar ao Ollama em ${config.ollama.baseUrl}. Está rodando? (${
-        err instanceof Error ? err.message : String(err)
-      })`,
+      `Não foi possível conectar ao Gemini. (${err instanceof Error ? err.message : String(err)})`,
     );
   }
 
   if (!response.ok) {
     const bodyText = await response.text().catch(() => '');
-    throw new Error(
-      `Ollama respondeu ${response.status}. Modelo "${config.ollama.model}" disponível? ${bodyText.slice(0, 200)}`,
-    );
+    throw new Error(`Gemini respondeu ${response.status}: ${bodyText.slice(0, 300)}`);
   }
 
-  const payload = (await response.json()) as OllamaChatResponse;
-  const content = payload.message?.content ?? payload.response ?? '';
+  const payload = (await response.json()) as GeminiResponse;
+  const text =
+    payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
+  if (!text.trim()) {
+    throw new Error('Gemini retornou uma resposta vazia.');
+  }
+  return text;
+}
+
+/** Gera roteiro Curiosidade via Gemini (JSON estruturado). */
+export async function generateScript(topic: string): Promise<GeneratedScript> {
+  const { system, user } = buildPrompts(topic);
+  log.info(`gerando roteiro via Gemini (${config.christian.geminiModel})`);
+  const content = await generateViaGemini(system, user);
   return normalizeScript(extractJson(content), topic);
 }

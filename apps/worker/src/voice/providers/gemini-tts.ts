@@ -88,8 +88,7 @@ async function callGeminiTts(group: GeminiTtsGroup): Promise<Buffer> {
 
 /**
  * Sintetiza um grupo de segmentos com Gemini TTS. Uma tentativa extra com
- * pequeno backoff em erros transitórios (rede/5xx); sem retry em 429 — a cota
- * não volta dentro da mesma execução, então o fallback para Piper é imediato.
+ * pequeno backoff em erros transitórios (rede/5xx); sem retry em 429.
  */
 export async function synthesizeGroupWithGeminiTts(group: GeminiTtsGroup, outputWav: string): Promise<void> {
   try {

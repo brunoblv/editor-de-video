@@ -332,7 +332,7 @@ export function ProjectEditor({
                   disabled={locked}
                   onChange={(event) => void toggleTranscribe(clip, event.target.checked)}
                 />
-                <span>Legendas automáticas (Whisper)</span>
+                <span>Legendas automáticas (Gemini)</span>
               </label>
               <div className="muted" style={{ marginTop: 8 }}>
                 {(clip.sizeByte / 1024 / 1024).toFixed(1)} MB

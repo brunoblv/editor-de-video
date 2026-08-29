@@ -13,14 +13,14 @@ import { normalizeClip, probeVideo } from './ffmpeg.js';
 import { renderTopList } from './render.js';
 import { serveDirectory } from './static-server.js';
 import { logger } from './logger.js';
-import { transcribeClip, transcriptToCaptions, type TranscriptResult } from './whisper.js';
+import { emptyTranscript, transcribeClip, transcriptToCaptions, type TranscriptResult } from './captions.js';
 
 const log = logger('pipeline');
 
-/** Fatias: normalização 5–45%, whisper 45–65%, render 65–98%. */
+/** Fatias: normalização 5–45%, legendas 45–65%, render 65–98%. */
 const NORMALIZE_START = 5;
 const NORMALIZE_END = 45;
-const WHISPER_END = 65;
+const CAPTIONS_END = 65;
 const RENDER_END = 98;
 
 async function setProgress(projectId: string, progress: number, stage: string): Promise<void> {
@@ -47,12 +47,12 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
 
   const workDir = path.join(config.tmpDir, `render-${projectId}`);
   const assetsDir = path.join(workDir, 'assets');
-  const whisperDir = path.join(workDir, 'whisper');
+  const captionsDir = path.join(workDir, 'captions');
   const outputPath = path.join(workDir, 'final.mp4');
 
   await fsp.rm(workDir, { recursive: true, force: true });
   await fsp.mkdir(assetsDir, { recursive: true });
-  await fsp.mkdir(whisperDir, { recursive: true });
+  await fsp.mkdir(captionsDir, { recursive: true });
 
   const assets = await serveDirectory(assetsDir);
 
@@ -125,27 +125,27 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
     const toTranscribe = project.clips
       .map((clip, index) => ({ clip, index }))
       .filter(({ clip }) => clip.transcribe);
-    const whisperTotal = Math.max(toTranscribe.length, 1);
+    const captionsTotal = Math.max(toTranscribe.length, 1);
 
     for (const [index, clip] of project.clips.entries()) {
       let captions: RenderClip['captions'];
       let transcript: TranscriptResult | null = null;
 
       if (clip.transcribe) {
-        const whisperIndex = toTranscribe.findIndex((item) => item.index === index);
-        const stage = `Transcrevendo clipe ${whisperIndex + 1}/${toTranscribe.length}`;
+        const captionsIndex = toTranscribe.findIndex((item) => item.index === index);
+        const stage = `Legendas clipe ${captionsIndex + 1}/${toTranscribe.length}`;
         log.info(`${projectId}: ${stage}`);
 
-        const whisperSlice = (WHISPER_END - NORMALIZE_END) / whisperTotal;
-        await setProgress(projectId, NORMALIZE_END + whisperSlice * whisperIndex, stage);
+        const captionsSlice = (CAPTIONS_END - NORMALIZE_END) / captionsTotal;
+        await setProgress(projectId, NORMALIZE_END + captionsSlice * captionsIndex, stage);
 
         if (!probeAudio[index]) {
-          transcript = { language: config.whisper.language, segments: [] };
+          transcript = emptyTranscript();
           log.info(`${projectId}: clipe ${clip.id} sem áudio — legendas vazias`);
         } else {
           transcript = await transcribeClip({
             videoPath: normalizedPaths[index]!,
-            workDir: whisperDir,
+            workDir: captionsDir,
             clipId: clip.id,
           });
         }
@@ -158,7 +158,7 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
         captions = transcriptToCaptions(transcript, config.video.fps);
         await setProgress(
           projectId,
-          NORMALIZE_END + whisperSlice * (whisperIndex + 1),
+          NORMALIZE_END + captionsSlice * (captionsIndex + 1),
           stage,
         );
       } else if (clip.transcriptJson !== null) {
@@ -179,7 +179,7 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
     }
 
     if (toTranscribe.length === 0) {
-      await setProgress(projectId, WHISPER_END, 'Preparando render');
+      await setProgress(projectId, CAPTIONS_END, 'Preparando render');
     }
 
     // --- Etapa 3: render --------------------------------------------------
@@ -189,14 +189,14 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
       clips: renderClips,
     };
 
-    await setProgress(projectId, WHISPER_END, 'Renderizando');
+    await setProgress(projectId, CAPTIONS_END, 'Renderizando');
     log.info(`${projectId}: renderizando ${renderClips.length} clipes`);
 
     await renderTopList({
       props,
       outputPath,
       onProgress: (ratio) => {
-        const value = WHISPER_END + (RENDER_END - WHISPER_END) * ratio;
+        const value = CAPTIONS_END + (RENDER_END - CAPTIONS_END) * ratio;
         void setProgress(projectId, value, 'Renderizando').catch(() => undefined);
       },
     });
