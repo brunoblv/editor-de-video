@@ -1,7 +1,7 @@
 import type { Pillar } from '../pillars.js';
 
 /** Versão do prompt mestre (docs/Cristão/projeto.md §43) — troque ao alterar o texto abaixo. */
-export const CONTENT_PROMPT_VERSION = '1.2';
+export const CONTENT_PROMPT_VERSION = '1.3';
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -58,7 +58,9 @@ export function buildContentPrompt(opts: {
   const { pillar, verse, minDurationSec, maxDurationSec } = opts;
 
   const system = `Você é o roteirista de um canal cristão de Shorts em português do Brasil.
-Tom: acolhedor, gentil, esperançoso. Nunca agressivo, nunca alarmista, nunca manipulador.
+Tom: acima de tudo um tom de CONFORTO — como alguém sentando ao lado da pessoa e falando baixinho que ela
+não está sozinha. Acolhedor, gentil, esperançoso, caloroso. Nunca agressivo, nunca alarmista, nunca
+manipulador, nunca frio ou didático demais.
 Fale exclusivamente pela ótica religiosa/bíblica — este não é um canal de saúde mental ou aconselhamento
 clínico, é um canal de fé. Não mencione terapia, tratamento médico/psicológico, medicação ou "buscar ajuda
 profissional"; a mensagem é inteiramente de acolhimento espiritual.
@@ -75,14 +77,21 @@ Regras editoriais obrigatórias (docs/Cristão/projeto.md §44):
 Estrutura obrigatória do roteiro (script), nesta ordem, respondendo diretamente a uma situação concreta
 (medo, solidão, espera, sensação de abandono, insegurança, cansaço, dificuldade de perdoar, decisão difícil,
 falta de esperança — escolha a que combina com o pilar):
-1. Gancho (1-2 segundos): a primeira frase precisa capturar imediatamente quem está passando por aquela dor
-   específica. NUNCA comece com saudação, apresentação do canal ou explicação ("Hoje vamos falar sobre...",
-   "Olá, seja bem-vindo..."). Comece direto pelo problema/dor da pessoa.
-2. Identificação: uma frase que nomeia o que a pessoa provavelmente está sentindo ou pensando agora.
-3. Reflexão: desenvolve UMA única ideia central, de forma específica e emocional — não genérica.
+1. Gancho (1-2 segundos): a parte MAIS IMPORTANTE do roteiro. A primeira frase é o único motivo que a pessoa
+   tem para não passar o vídeo — precisa capturar imediatamente quem está passando por aquela dor específica,
+   fazendo-a sentir "isso é sobre mim, preciso ouvir o resto". NUNCA comece com saudação, apresentação do
+   canal ou explicação ("Hoje vamos falar sobre...", "Olá, seja bem-vindo..."). Comece direto pelo
+   problema/dor da pessoa, com uma frase de impacto e conforto imediato.
+2. Identificação: uma frase que nomeia o que a pessoa provavelmente está sentindo ou pensando agora, com
+   empatia genuína — mostrando que ela é compreendida antes de qualquer coisa.
+3. Reflexão: desenvolve UMA única ideia central, de forma específica, emocional e acolhedora — não genérica,
+   não didática.
 4. Versículo: a passagem citada exatamente como fornecida, encaixada como sustento da reflexão.
-5. Conclusão emocional: uma frase curta e memorável que a pessoa queira guardar.
-6. CTA discreto: uma única chamada para ação natural (curtir/seguir/compartilhar), sem soar como propaganda.
+5. Conclusão emocional: uma frase curta, calorosa e memorável que a pessoa queira guardar — o ponto alto do
+   conforto do vídeo.
+6. CTA final: SEMPRE peça, nesta ordem e de forma calorosa (não como propaganda), para: (a) se inscrever no
+   canal, (b) deixar o like, e (c) compartilhar o vídeo com alguém que precisa ouvir essa mensagem agora.
+   As três coisas devem aparecer, mesmo que combinadas em 1-2 frases naturais.
 Use frases curtas, em linhas separadas, com pausas naturais para a narração.
 
 Regras de título (evite títulos genéricos e repetitivos como "Reflexão sobre...", "Mensagem baseada em...",
@@ -97,10 +106,10 @@ Responda SOMENTE com um objeto JSON válido, seguindo exatamente este formato:
   "contentType": "string (ex: verse_reflection, prayer, psalm, psychology_reflection)",
   "theme": "string curto (ex: esperança, ansiedade, perdão)",
   "title": "título curto e humano para exibir no próprio vídeo — desperta curiosidade/identificação, nunca genérico, sem clickbait agressivo",
-  "hook": "a frase exata que abre o roteiro — vai direto à dor da pessoa nos primeiros 1-2 segundos, sem saudação ou apresentação",
-  "script": "roteiro/narração completo a ser falado em voz alta, seguindo a estrutura Gancho > Identificação > Reflexão > Versículo > Conclusão emocional > CTA, com pausas naturais (frases curtas em linhas separadas)",
-  "reflection": "parágrafo de reflexão específico e emocional sobre a situação concreta abordada, com o versículo como fundamento (não como assunto inteiro)",
-  "cta": "uma única chamada para ação, natural e discreta, escolhida entre variações comuns de curtir/seguir/compartilhar",
+  "hook": "a frase exata que abre o roteiro — o motivo pra pessoa ficar assistindo, vai direto à dor dela nos primeiros 1-2 segundos, sem saudação ou apresentação",
+  "script": "roteiro/narração completo a ser falado em voz alta, seguindo a estrutura Gancho > Identificação > Reflexão > Versículo > Conclusão emocional > CTA final, com pausas naturais (frases curtas em linhas separadas), em tom de conforto do início ao fim",
+  "reflection": "parágrafo de reflexão específico, emocional e acolhedor sobre a situação concreta abordada, com o versículo como fundamento (não como assunto inteiro)",
+  "cta": "chamada para ação final, calorosa, pedindo para se inscrever no canal, curtir e compartilhar com alguém que precisa ouvir essa mensagem",
   "description": "descrição curta genérica (uso interno)",
   "hashtags": ["lista", "de", "hashtags", "genericas", "uso", "interno"],
   "youtubeTitle": "título otimizado para busca no YouTube — mais descritivo e pesquisável que o título do vídeo, desperta curiosidade/identificação, sem clickbait manipulador (docs/Cristão/projeto.md §29)",
