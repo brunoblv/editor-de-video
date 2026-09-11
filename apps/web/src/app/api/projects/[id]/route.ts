@@ -31,6 +31,7 @@ interface PatchBody {
   watermark?: unknown;
   topic?: unknown;
   pillar?: unknown;
+  rabiscoThought?: unknown;
 }
 
 export async function PATCH(request: NextRequest, { params }: Params): Promise<Response> {
@@ -43,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
       watermark?: string | null;
       topic?: string | null;
       pillar?: string | null;
+      rabiscoThought?: string;
     } = {};
 
     if (typeof body.title === 'string') {
@@ -66,6 +68,13 @@ export async function PATCH(request: NextRequest, { params }: Params): Promise<R
         throw new ApiError('Pilar de conteúdo inválido.');
       }
       data.pillar = pillar === '' ? null : pillar;
+    }
+    if (typeof body.rabiscoThought === 'string') {
+      const rabiscoThought = body.rabiscoThought.trim();
+      if (rabiscoThought.length < 10) {
+        throw new ApiError('Escreva um pouco mais sobre o que você está pensando (mínimo 10 caracteres).');
+      }
+      data.rabiscoThought = rabiscoThought;
     }
 
     const project = await prisma.project.update({

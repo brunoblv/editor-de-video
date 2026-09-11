@@ -34,6 +34,10 @@ export async function POST(_request: NextRequest, { params }: Params): Promise<R
       }
     } else if (project.kind === ProjectKind.CHRISTIAN) {
       // Pilar é opcional na criação — o Content Planner escolhe um automaticamente no worker.
+    } else if (project.kind === ProjectKind.RABISCO) {
+      if (!project.rabiscoThought?.trim()) {
+        throw new ApiError('Escreva o pensamento antes de produzir.');
+      }
     } else {
       const { minClipsPerProject } = config.limits;
       if (project._count.clips < minClipsPerProject) {

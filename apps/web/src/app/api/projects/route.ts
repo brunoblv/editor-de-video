@@ -25,6 +25,7 @@ interface CreateBody {
   kind?: unknown;
   topic?: unknown;
   pillar?: unknown;
+  rabiscoThought?: unknown;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -35,8 +36,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     const watermark = watermarkRaw === '' ? null : watermarkRaw;
 
     const kindRaw = typeof body.kind === 'string' ? body.kind : 'TOP_LIST';
-    if (kindRaw !== 'TOP_LIST' && kindRaw !== 'CURIOSIDADE' && kindRaw !== 'CHRISTIAN') {
+    if (kindRaw !== 'TOP_LIST' && kindRaw !== 'CURIOSIDADE' && kindRaw !== 'CHRISTIAN' && kindRaw !== 'RABISCO') {
       throw new ApiError('Tipo de projeto inválido.');
+    }
+
+    if (kindRaw === 'RABISCO') {
+      const rabiscoThought = typeof body.rabiscoThought === 'string' ? body.rabiscoThought.trim() : '';
+      if (rabiscoThought.length < 10) {
+        throw new ApiError('Escreva um pouco mais sobre o que você está pensando (mínimo 10 caracteres).');
+      }
+
+      const project = await prisma.project.create({
+        data: {
+          kind: ProjectKind.RABISCO,
+          title: '(gerando...)',
+          rabiscoThought,
+          durationPreset: 'SHORT',
+          watermark,
+          userId: user.id,
+        },
+      });
+      return json({ project }, 201);
     }
 
     if (kindRaw === 'CHRISTIAN') {

@@ -27,6 +27,10 @@
       "types": "./dist/christian.d.ts",
       "default": "./dist/christian.js"
     },
+    "./rabisco": {
+      "types": "./dist/rabisco.d.ts",
+      "default": "./dist/rabisco.js"
+    },
     "./render": {
       "types": "./dist/types.d.ts",
       "default": "./dist/types.js"

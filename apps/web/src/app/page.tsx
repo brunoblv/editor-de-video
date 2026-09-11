@@ -43,7 +43,9 @@ export default async function HomePage() {
                     ? ` · ${project._count.mediaAssets} mídia${project._count.mediaAssets === 1 ? '' : 's'}`
                     : project.kind === 'AMBIENT'
                       ? ` · ${project.durationMinutes ?? '—'} min`
-                      : ` · ${project._count.clips} clipe${project._count.clips === 1 ? '' : 's'}`}
+                      : project.kind === 'RABISCO'
+                        ? ''
+                        : ` · ${project._count.clips} clipe${project._count.clips === 1 ? '' : 's'}`}
                   {' · '}
                   {project.createdAt.toLocaleDateString('pt-BR')}
                 </div>

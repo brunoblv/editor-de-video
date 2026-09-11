@@ -4,11 +4,19 @@
  */
 export { PILLARS, WEEKDAY_CATEGORIES, findPillar, type Pillar } from './christian.js';
 export {
+  RABISCO_CHARACTER_NAME,
+  RABISCO_TAGLINE,
+  RABISCO_EXPRESSIONS,
+  RABISCO_ACTIONS,
+  resolveRabiscoAsset,
+} from './rabisco.js';
+export {
   COUNTDOWN_DURATION_FRAMES,
   INTRO_DURATION_FRAMES,
   OUTRO_DURATION_FRAMES,
   christianDurationInFrames,
   curiosidadeDurationInFrames,
+  rabiscoDurationInFrames,
   totalDurationInFrames,
   type AmbientAudioLayer,
   type AmbientAudioTimeline,
@@ -26,6 +34,12 @@ export {
   type CuriosidadeScene,
   type ProjectKindValue,
   type ProjectStatusValue,
+  type RabiscoAction,
+  type RabiscoAnimation,
+  type RabiscoEmotion,
+  type RabiscoPosition,
+  type RabiscoProps,
+  type RabiscoScene,
   type RenderClip,
   type TopListProps,
 } from './types.js';

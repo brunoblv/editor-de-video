@@ -6,6 +6,7 @@ import {
   repoRoot,
   type ChristianProps,
   type CuriosidadeProps,
+  type RabiscoProps,
   type TopListProps,
 } from '@editor-video/core';
 import { logger } from './logger.js';
@@ -16,6 +17,7 @@ const ENTRY_POINT = path.join(repoRoot, 'packages', 'video', 'src', 'index.ts');
 const TOP_LIST_ID = 'TopList';
 const CURIOSIDADE_ID = 'Curiosidade';
 const CHRISTIAN_ID = 'Christian';
+const RABISCO_ID = 'Rabisco';
 
 let bundlePromise: Promise<string> | null = null;
 
@@ -100,4 +102,12 @@ export async function renderChristian(opts: {
   onProgress?: (ratio: number) => void;
 }): Promise<void> {
   await renderComposition(CHRISTIAN_ID, opts.props, opts.outputPath, opts.onProgress);
+}
+
+export async function renderRabisco(opts: {
+  props: RabiscoProps;
+  outputPath: string;
+  onProgress?: (ratio: number) => void;
+}): Promise<void> {
+  await renderComposition(RABISCO_ID, opts.props, opts.outputPath, opts.onProgress);
 }

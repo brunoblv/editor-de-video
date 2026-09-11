@@ -3,6 +3,21 @@ import fsp from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 
+const CONTENT_TYPES: Record<string, string> = {
+  '.mp4': 'video/mp4',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+};
+
+function contentTypeFor(file: string): string {
+  return CONTENT_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
+}
+
 export interface StaticServer {
   /** Base URL (sem barra final) para montar os src dos clipes. */
   baseUrl: string;
@@ -29,6 +44,7 @@ export async function serveDirectory(dir: string): Promise<StaticServer> {
         }
 
         const stat = await fsp.stat(file);
+        const contentType = contentTypeFor(file);
         const range = req.headers.range;
         const match = range ? /^bytes=(\d*)-(\d*)$/.exec(range.trim()) : null;
 
@@ -36,7 +52,7 @@ export async function serveDirectory(dir: string): Promise<StaticServer> {
           const start = match[1] ? Number(match[1]) : 0;
           const end = match[2] ? Math.min(Number(match[2]), stat.size - 1) : stat.size - 1;
           res.writeHead(206, {
-            'Content-Type': 'video/mp4',
+            'Content-Type': contentType,
             'Content-Range': `bytes ${start}-${end}/${stat.size}`,
             'Content-Length': end - start + 1,
             'Accept-Ranges': 'bytes',
@@ -46,7 +62,7 @@ export async function serveDirectory(dir: string): Promise<StaticServer> {
         }
 
         res.writeHead(200, {
-          'Content-Type': 'video/mp4',
+          'Content-Type': contentType,
           'Content-Length': stat.size,
           'Accept-Ranges': 'bytes',
         });

@@ -6,6 +6,7 @@ import { AmbientEditor } from '@/components/AmbientEditor';
 import { ChristianEditor } from '@/components/ChristianEditor';
 import { CuriosidadeEditor } from '@/components/CuriosidadeEditor';
 import { ProjectEditor } from '@/components/ProjectEditor';
+import { RabiscoEditor } from '@/components/RabiscoEditor';
 import { toProjectDTO } from '@/lib/dto';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   if (project.kind === ProjectKind.CHRISTIAN) {
     return <ChristianEditor initialProject={dto} />;
+  }
+
+  if (project.kind === ProjectKind.RABISCO) {
+    return <RabiscoEditor initialProject={dto} />;
   }
 
   return (

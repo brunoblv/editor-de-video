@@ -11,6 +11,7 @@ import { reanalyzeSoundAsset } from './ambient/sound-analyzer.js';
 import { runChristianPipeline } from './christian/pipeline.js';
 import { assertFfmpegAvailable } from './ffmpeg.js';
 import { markProjectFailed, runRenderPipeline } from './pipeline.js';
+import { runRabiscoPipeline } from './rabisco/pipeline.js';
 import { runCuriosidadePipeline } from './v2/pipeline-curiosidade.js';
 import { logger } from './logger.js';
 
@@ -48,6 +49,8 @@ async function main(): Promise<void> {
         await runAmbientPipeline(projectId, job.data.ambientMode ?? 'preview');
       } else if (project.kind === ProjectKind.CHRISTIAN) {
         await runChristianPipeline(projectId);
+      } else if (project.kind === ProjectKind.RABISCO) {
+        await runRabiscoPipeline(projectId);
       } else {
         await runRenderPipeline(projectId);
       }

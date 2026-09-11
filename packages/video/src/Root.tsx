@@ -3,18 +3,22 @@ import { Composition } from 'remotion';
 import {
   christianDurationInFrames,
   curiosidadeDurationInFrames,
+  rabiscoDurationInFrames,
   totalDurationInFrames,
   type ChristianProps,
   type CuriosidadeProps,
+  type RabiscoProps,
   type TopListProps,
 } from '@editor-video/core/render';
 import { Christian } from './Christian';
 import { Curiosidade } from './Curiosidade';
+import { Rabisco } from './Rabisco';
 import { TopList } from './TopList';
 
 export const TOP_LIST_ID = 'TopList';
 export const CURIOSIDADE_ID = 'Curiosidade';
 export const CHRISTIAN_ID = 'Christian';
+export const RABISCO_ID = 'Rabisco';
 
 // Usado apenas no Remotion Studio; o worker sempre passa inputProps reais com
 // URLs servidas pelo processo de render.
@@ -77,6 +81,45 @@ const defaultChristian: ChristianProps = {
   },
 };
 
+const defaultRabisco: RabiscoProps = {
+  title: 'Talvez eu não precise saber',
+  watermark: '@seucanal',
+  voiceoverUrl: '',
+  musicUrl: null,
+  musicVolume: 0.06,
+  scenes: [
+    {
+      startFrame: 0,
+      durationInFrames: 90,
+      emotion: 'reflexao',
+      action: 'thinking',
+      position: 'center',
+      animation: 'fade',
+      assetUrl: '',
+    },
+    {
+      startFrame: 90,
+      durationInFrames: 120,
+      emotion: 'confuso',
+      action: 'walking',
+      position: 'left',
+      animation: 'slide-left',
+      thought: 'E se eu estiver tentando controlar tudo?',
+      assetUrl: '',
+    },
+    {
+      startFrame: 210,
+      durationInFrames: 120,
+      emotion: 'leveza',
+      action: 'sky',
+      position: 'center',
+      animation: 'rise',
+      assetUrl: '',
+    },
+  ],
+  captions: [],
+};
+
 export const RemotionRoot: React.FC = () => (
   <>
     <Composition
@@ -113,6 +156,18 @@ export const RemotionRoot: React.FC = () => (
       durationInFrames={christianDurationInFrames(defaultChristian)}
       calculateMetadata={({ props }) => ({
         durationInFrames: Math.max(1, christianDurationInFrames(props)),
+      })}
+    />
+    <Composition
+      id={RABISCO_ID}
+      component={Rabisco}
+      defaultProps={defaultRabisco}
+      width={1080}
+      height={1920}
+      fps={30}
+      durationInFrames={rabiscoDurationInFrames(defaultRabisco)}
+      calculateMetadata={({ props }) => ({
+        durationInFrames: Math.max(1, rabiscoDurationInFrames(props)),
       })}
     />
   </>

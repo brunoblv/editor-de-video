@@ -197,3 +197,63 @@ export type ChristianProps = {
 export function christianDurationInFrames(props: ChristianProps): number {
   return props.scenes.reduce((acc, scene) => acc + scene.durationInFrames, 0);
 }
+
+export type RabiscoEmotion =
+  | 'leveza'
+  | 'reflexao'
+  | 'desabafo'
+  | 'ideia'
+  | 'gratidao'
+  | 'confuso'
+  | 'surpresa';
+
+export type RabiscoAction =
+  | 'thinking'
+  | 'writing'
+  | 'reading'
+  | 'walking'
+  | 'coffee'
+  | 'music'
+  | 'sky'
+  | 'sitting'
+  | 'sharing'
+  | 'learning';
+
+export type RabiscoPosition = 'center' | 'left' | 'right' | 'bottom';
+
+export type RabiscoAnimation = 'fade' | 'slide-left' | 'slide-right' | 'rise' | 'float' | 'zoom';
+
+export type RabiscoScene = {
+  startFrame: number;
+  durationInFrames: number;
+  emotion: RabiscoEmotion;
+  action: RabiscoAction;
+  position: RabiscoPosition;
+  animation: RabiscoAnimation;
+  /** Pensamento visual curto (ex: "E se?"). Sem isso, nenhum balão é exibido. */
+  thought?: string;
+  /**
+   * URL absoluta do PNG do personagem para esta cena, já servida pelo worker
+   * durante o render (mesmo mecanismo do voiceoverUrl/scenes do Christian) —
+   * o Remotion não tem acesso ao `public/` do apps/web, então nunca resolve
+   * `action` sozinho.
+   */
+  assetUrl: string;
+};
+
+export type RabiscoProps = {
+  title: string;
+  watermark: string | null;
+  voiceoverUrl: string;
+  musicUrl: string | null;
+  musicVolume: number;
+  scenes: RabiscoScene[];
+  captions: CaptionSegment[];
+};
+
+export function rabiscoDurationInFrames(props: RabiscoProps): number {
+  return props.scenes.reduce(
+    (acc, scene) => Math.max(acc, scene.startFrame + scene.durationInFrames),
+    0,
+  );
+}

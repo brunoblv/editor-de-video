@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { PILLARS } from '@editor-video/core/christian';
 
-type Mode = 'TOP_LIST' | 'CURIOSIDADE' | 'CHRISTIAN';
+type Mode = 'TOP_LIST' | 'CURIOSIDADE' | 'CHRISTIAN' | 'RABISCO';
 
 export function NewProjectForm() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export function NewProjectForm() {
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [pillar, setPillar] = useState('');
+  const [rabiscoThought, setRabiscoThought] = useState('');
   const [watermark, setWatermark] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -27,7 +28,9 @@ export function NewProjectForm() {
           ? { kind: 'CURIOSIDADE', topic, watermark }
           : mode === 'CHRISTIAN'
             ? { kind: 'CHRISTIAN', pillar, watermark }
-            : { kind: 'TOP_LIST', title, watermark };
+            : mode === 'RABISCO'
+              ? { kind: 'RABISCO', rabiscoThought, watermark }
+              : { kind: 'TOP_LIST', title, watermark };
 
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -50,7 +53,9 @@ export function NewProjectForm() {
       ? topic.trim().length >= 3
       : mode === 'CHRISTIAN'
         ? true
-        : title.trim().length >= 3;
+        : mode === 'RABISCO'
+          ? rabiscoThought.trim().length >= 10
+          : title.trim().length >= 3;
 
   return (
     <form className="card" onSubmit={onSubmit}>
@@ -79,9 +84,32 @@ export function NewProjectForm() {
         >
           Canal Cristão
         </button>
+        <button
+          type="button"
+          className={mode === 'RABISCO' ? 'primary' : 'ghost'}
+          onClick={() => setMode('RABISCO')}
+        >
+          Rabisco — Pensamento
+        </button>
       </div>
 
-      {mode === 'CHRISTIAN' ? (
+      {mode === 'RABISCO' ? (
+        <div>
+          <label htmlFor="rabiscoThought">O que você está pensando?</label>
+          <textarea
+            id="rabiscoThought"
+            value={rabiscoThought}
+            onChange={(event) => setRabiscoThought(event.target.value)}
+            placeholder="Escreva aqui o que você está sentindo, pensando ou querendo desabafar..."
+            rows={6}
+            maxLength={2000}
+            required
+          />
+          <p className="muted" style={{ marginTop: 8, marginBottom: 0, fontSize: 13 }}>
+            O Rabisco escreve a reflexão, gera narração, legendas e as cenas do personagem sozinho.
+          </p>
+        </div>
+      ) : mode === 'CHRISTIAN' ? (
         <div>
           <label htmlFor="pillar">Pilar de conteúdo (opcional)</label>
           <select id="pillar" value={pillar} onChange={(event) => setPillar(event.target.value)}>
@@ -142,7 +170,7 @@ export function NewProjectForm() {
 
       <div style={{ marginTop: 16 }}>
         <button className="primary" type="submit" disabled={saving || !canSubmit}>
-          {saving ? 'Criando...' : 'Criar projeto'}
+          {saving ? 'Criando...' : mode === 'RABISCO' ? 'Criar reflexão' : 'Criar projeto'}
         </button>
       </div>
     </form>

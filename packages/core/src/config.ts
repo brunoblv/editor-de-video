@@ -133,6 +133,14 @@ export const config = {
     /** Handle do canal (ex.: "@minutodefe56") — usado como watermark padrão. */
     youtubeHandle: str('CHRISTIAN_YOUTUBE_HANDLE', ''),
   },
+  rabisco: {
+    /** Reaproveita a chave do Christian por padrão — permite override via env se precisar de cota separada. */
+    geminiApiKey: str('RABISCO_GEMINI_API_KEY', str('GEMINI_API_KEY', '')),
+    geminiModel: str('RABISCO_GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    /** SHORT apenas no MVP (docs/RABISCO.md §23). */
+    minDurationSec: num('RABISCO_MIN_DURATION_SEC', 30),
+    maxDurationSec: num('RABISCO_MAX_DURATION_SEC', 45),
+  },
   auth: {
     secret: str('AUTH_SECRET', str('NEXTAUTH_SECRET', '')),
   },

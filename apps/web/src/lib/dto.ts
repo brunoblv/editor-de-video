@@ -63,6 +63,10 @@ export interface ProjectDTO {
   youtubeShortId: string | null;
   youtubePlaylistIds: string[];
   publishedAt: string | null;
+  rabiscoThought: string | null;
+  rabiscoScriptJson: unknown;
+  characterScenesJson: unknown;
+  durationPreset: string | null;
   clips: ClipDTO[];
   mediaAssets: MediaAssetDTO[];
 }
@@ -111,6 +115,10 @@ export function toProjectDTO(
     youtubeShortId: project.youtubeShortId ?? null,
     youtubePlaylistIds: project.youtubePlaylistIds ?? [],
     publishedAt: project.publishedAt ? project.publishedAt.toISOString() : null,
+    rabiscoThought: project.rabiscoThought ?? null,
+    rabiscoScriptJson: project.rabiscoScriptJson ?? null,
+    characterScenesJson: project.characterScenesJson ?? null,
+    durationPreset: project.durationPreset ?? null,
     clips: project.clips.map((clip) => ({
       id: clip.id,
       position: clip.position,
@@ -151,6 +159,7 @@ export const KIND_LABEL: Record<string, string> = {
   CURIOSIDADE: 'Curiosidade',
   AMBIENT: 'Midnight Ambient',
   CHRISTIAN: 'Canal Cristão',
+  RABISCO: 'Rabisco',
 };
 
 export function fileUrl(key: string, download = false): string {

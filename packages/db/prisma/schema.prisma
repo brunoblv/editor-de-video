@@ -12,6 +12,7 @@ enum ProjectKind {
   CURIOSIDADE
   AMBIENT
   CHRISTIAN
+  RABISCO
 }
 
 enum ProjectStatus {
@@ -152,6 +153,18 @@ model Project {
   recipe          Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
   recipeVersion   Int?
   pipelineVersion String?
+
+  /// --- Rabisco ---
+  /// Pensamento/desabafo original digitado pelo usuário (input bruto)
+  rabiscoThought String?
+  /// Roteiro gerado pelo LLM (title/hook/narration/durationTargetSec)
+  rabiscoScriptJson Json?
+  /// Sequência de cenas do personagem (emotion/action/position/animation/thought por trecho)
+  characterScenesJson Json?
+  /// Preset de duração alvo: SHORT (único suportado no MVP) | MEDIUM | LONG
+  durationPreset String? @default("SHORT")
+  /// Versão do prompt usado nesta geração (auditoria/A-B futura)
+  rabiscoPromptVersion String?
 
   /// Midnight brand / packaging
   universe            String?
