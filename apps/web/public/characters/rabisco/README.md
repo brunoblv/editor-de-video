@@ -19,7 +19,18 @@ Estado atual (por arquivo em `actions/`):
 
 Nota técnica: se for gerar novas poses via um modelo de imagem que "desenha"
 o fundo xadrez de transparência em vez de emitir alpha real (isso aconteceu
-na primeira leva), rode uma remoção de fundo dedicada (ex.: `remove_background`
-da Higgsfield, ou o script de limiarização por proximidade de cor usado para
-corrigir os 3 arquivos atuais) antes de salvar o PNG final — não confie no
-canal alpha sem checar com `magick identify -verbose` (`Alpha: min/max`).
+na primeira leva), rode:
+
+```
+npm run rabisco:fix-alpha --workspace=@editor-video/worker
+```
+
+(`apps/worker/src/rabisco/fix-character-alpha.ts`) — reconstrói o alpha por
+tom de cinza (claro = fundo, escuro = tinta, com rampa suave só na borda) e
+recentraliza o personagem no canvas. Não usa flood-fill/conectividade de
+propósito: essa arte é só traço de tinta sobre fundo transparente, sem
+preenchimento interno, então uma primeira versão do script que só zerava
+pixels *conectados* à borda do canvas deixava sólido (errado) qualquer vão
+cercado pelo próprio traço, como o interior do círculo da cabeça. Nunca
+confie no canal alpha de um asset novo sem checar com
+`magick identify -verbose` (`Alpha: min/max`) antes de commitar.

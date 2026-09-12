@@ -8,7 +8,8 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "christian:seed-bible": "tsx src/christian/seed-bible.ts",
-    "christian:generate-daily": "tsx src/christian/generate-daily.ts"
+    "christian:generate-daily": "tsx src/christian/generate-daily.ts",
+    "rabisco:fix-alpha": "tsx src/rabisco/fix-character-alpha.ts"
   },
   "dependencies": {
     "@editor-video/core": "*",
@@ -16,7 +17,8 @@
     "@editor-video/video": "*",
     "@remotion/bundler": "^4.0.0",
     "@remotion/renderer": "^4.0.0",
-    "bullmq": "^5.34.10"
+    "bullmq": "^5.34.10",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
