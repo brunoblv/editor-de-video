@@ -62,6 +62,41 @@ function animationStyle(animation: RabiscoScene['animation'], local: number, tot
   }
 }
 
+/**
+ * Fronteira cabeça/corpo (fração da altura da imagem, de cima pra baixo),
+ * estimada visualmente por pose — é um efeito de estilo, não uma costura
+ * anatômica exata. `DEFAULT_HEAD_SPLIT` cobre qualquer ação sem entrada aqui.
+ */
+const HEAD_SPLIT: Partial<Record<RabiscoScene['action'], number>> = {
+  thinking: 0.43,
+  sitting: 0.38,
+  walking: 0.32,
+};
+const DEFAULT_HEAD_SPLIT = 0.4;
+
+/** Ações em que o corpo simula passada em vez de respiração parada. */
+const GAIT_ACTIONS = new Set<RabiscoScene['action']>(['walking']);
+
+/** Balanço leve e contínuo da cabeça, fora de fase do corpo — RABISCO.md §11: pequenas
+ * oscilações, nunca cinematográficas. */
+function headLayerStyle(frame: number): React.CSSProperties {
+  const rotateDeg = Math.sin(frame / 20) * 2.2;
+  const bobPx = Math.sin(frame / 20 + Math.PI / 2) * 3;
+  return { transform: `translateY(${bobPx}px) rotate(${rotateDeg}deg)`, transformOrigin: '50% 100%' };
+}
+
+/** Corpo: passada simulada (walking) ou respiração/balanço sutil (poses paradas). */
+function bodyLayerStyle(action: RabiscoScene['action'], frame: number): React.CSSProperties {
+  if (GAIT_ACTIONS.has(action)) {
+    const bounce = Math.abs(Math.sin(frame / 6)) * -6;
+    const tilt = Math.sin(frame / 6) * 2.5;
+    return { transform: `translateY(${bounce}px) rotate(${tilt}deg)`, transformOrigin: '50% 100%' };
+  }
+  const breathe = 1 + Math.sin(frame / 30) * 0.015;
+  const sway = Math.sin(frame / 34) * 1.6;
+  return { transform: `scaleY(${breathe}) translateX(${sway}px)`, transformOrigin: '50% 100%' };
+}
+
 const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position'] }> = ({ text, position }) => {
   const frame = useCurrentFrame();
   const opacity = interpolate(frame, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
@@ -93,12 +128,28 @@ const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position']
 
 const CharacterScene: React.FC<{ scene: RabiscoScene }> = ({ scene }) => {
   const frame = useCurrentFrame();
-  const style = animationStyle(scene.animation, frame, scene.durationInFrames);
+  const outerStyle = animationStyle(scene.animation, frame, scene.durationInFrames);
+  const headSplit = HEAD_SPLIT[scene.action] ?? DEFAULT_HEAD_SPLIT;
+  // As duas camadas se sobrepõem um pouco na costura (pescoço) — sem isso, a rotação/bob
+  // independente de cada uma abre uma fresta visível mostrando o fundo entre elas.
+  const SEAM_OVERLAP = 0.03;
+  const headClip = `inset(0 0 ${Math.max(0, 1 - headSplit - SEAM_OVERLAP) * 100}% 0)`;
+  const bodyClip = `inset(${Math.max(0, headSplit - SEAM_OVERLAP) * 100}% 0 0 0)`;
 
   return (
     <AbsoluteFill style={POSITION_STYLE[scene.position]}>
-      <div style={{ width: CHARACTER_SIZE, ...style }}>
-        <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block' }} />
+      <div style={{ width: CHARACTER_SIZE, position: 'relative', ...outerStyle }}>
+        {/* Reserva a altura da caixa (as duas cópias animadas abaixo são absolutas). */}
+        <Img
+          src={scene.assetUrl}
+          style={{ width: '100%', height: 'auto', display: 'block', visibility: 'hidden' }}
+        />
+        <div style={{ position: 'absolute', inset: 0, ...headLayerStyle(frame) }}>
+          <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block', clipPath: headClip }} />
+        </div>
+        <div style={{ position: 'absolute', inset: 0, ...bodyLayerStyle(scene.action, frame) }}>
+          <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block', clipPath: bodyClip }} />
+        </div>
       </div>
       {scene.thought ? <ThoughtBubble text={scene.thought} position={scene.position} /> : null}
     </AbsoluteFill>

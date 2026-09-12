@@ -518,6 +518,60 @@ PNGs em dois lugares do repo — recomendação: apontar para
 `apps/web/public/characters` diretamente (symlink ou path relativo), nunca
 copiar.
 
+**Implementado de fato (worker):** o worker copia o PNG de cada ação usada
+para dentro da pasta de assets efêmera do render (`copyCharacterAssets` em
+`apps/worker/src/rabisco/pipeline.ts`), como arquivo achatado
+`character-<action>.png` — `serveDirectory()`
+(`apps/worker/src/static-server.ts`) serve tudo pelo `basename` da URL contra
+uma única pasta raiz, sem suporte a subpastas, então esse é o único esquema
+compatível (nunca apontar `serveDirectory()` para `apps/web/public/characters`
+diretamente).
+
+### 6.4 Pós-MVP: animação real do personagem (não só câmera)
+
+O §6.2 original limitava a animação a efeitos de câmera sobre um PNG estático
+(fade/slide/rise/zoom). Depois do primeiro teste com arte real, o usuário
+pediu movimento de verdade do personagem, não só da câmera — e sem custo de
+geração de IA. Implementado em `packages/video/src/Rabisco.tsx`
+(`CharacterScene`):
+
+- A mesma imagem do personagem é renderizada **duas vezes**, sobrepostas,
+  cada cópia recortada via CSS `clip-path: inset(...)` — uma mantendo só a
+  região da cabeça, outra só o resto do corpo. Corte por ação (`HEAD_SPLIT`,
+  fração da altura a partir do topo, com um valor default para ações sem
+  entrada específica), com ~3% de sobreposição na costura (`SEAM_OVERLAP`)
+  pra rotação/deslocamento independente não abrir uma fresta mostrando o
+  fundo.
+- Cada camada anima de forma independente e contínua (`headLayerStyle`/
+  `bodyLayerStyle`, funções de `frame`): cabeça com leve inclinação + bob
+  vertical fora de fase; corpo com "respiração" sutil (`scaleY`) nas poses
+  paradas, ou passada simulada (bounce + tilt mais rápido) na ação `walking`.
+- Isso continua **dentro** do `<div>` já animado pela câmera
+  (`animationStyle`/`RabiscoAnimation`) — sem conflito, são transforms em
+  elementos DOM diferentes (o wrapper externo vs. as duas camadas internas).
+- Nenhuma mudança de tipo foi necessária (`RabiscoScene`/`RabiscoProps`
+  continuam iguais) — é puramente uma mudança de renderização em cima do
+  mesmo `assetUrl` único por cena.
+
+**Correção de assets associada:** os PNGs gerados por IA vieram com o
+"quadriculado de transparência" desenhado como pixel opaco em vez de alpha
+real, e descentralizados no canvas — corrigido via
+`apps/worker/src/rabisco/fix-character-alpha.ts` (`npm run rabisco:fix-alpha`,
+ver `apps/web/public/characters/rabisco/README.md` para detalhes técnicos e
+a armadilha de usar flood-fill/conectividade nesse estilo de arte — não usar).
+
+**Upgrade futuro opcional (não implementado):** animação via IA de verdade
+(múltiplos frames reais, não recorte de 2 camadas da mesma imagem), usando o
+modelo Higgsfield `autosprite` (1 imagem → sprite sheet, com opção
+`remove_bg: 'ultra'` resolvendo transparência na origem). Exige créditos,
+um teste piloto (formato exato do atlas retornado é desconhecido até rodar
+um job real, e há risco do estilo derivar pra "sprite de jogo"), e mudança
+de tipo (`RabiscoScene.assetUrl: string` → um tipo discriminado
+`RabiscoCharacterAsset = {kind:'static',url} | {kind:'sprite', sheetUrl,
+frameCount, columns, rows, frameWidth, frameHeight, fps, loop}`), com o
+player de sprite em `Rabisco.tsx` via `background-position` (determinístico
+por frame, sem decodificar nova imagem a cada frame do Remotion).
+
 ---
 
 ## 7. `apps/web` — UI
