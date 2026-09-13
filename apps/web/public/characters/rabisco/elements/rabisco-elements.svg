@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Sprite sheet: cada bloco tem 30x80. Use via CSS background-position ou extraia os símbolos. -->
+  <g id="thought-positive" transform="translate(0 0)"><path d="M4 25c0-7 7-11 14-10 4-6 16-5 18 2 9-2 13 10 5 14 1 8-11 11-16 6-7 5-17 1-16-6-4-1-5-3-5-6z"/><circle cx="15" cy="46" r="1.8"/><circle cx="11" cy="53" r="1.2"/></g>
+  <g id="thought-negative" transform="translate(30 0)"><path d="M5 24c2-13 21-15 29-5 10 11-3 24-15 19-8 5-18-3-14-14z"/><path d="M9 23c12-14 23 14 2 3 21-15 21 20 1 5 20-11 12 16-1 1 10-18 22 4 2-9"/><circle cx="17" cy="47" r="1.8"/><circle cx="13" cy="54" r="1.2"/></g>
+  <g id="heart" transform="translate(60 0)"><path d="M15 42C-3 30 4 11 15 20 26 11 33 30 15 42z"/><path d="M14 43C-1 29 5 15 15 22 25 15 31 29 16 43" opacity=".55"/></g>
+  <g id="sun" transform="translate(90 0)"><circle cx="15" cy="26" r="8"/><path d="M15 5v6M15 41v6M-1 26h6M25 26h6M4 15l4 4M22 33l4 4M26 15l-4 4M8 33l-4 4"/></g>
+  <g id="moon" transform="translate(120 0)"><path d="M23 9C9 10 7 31 22 37 8 44 0 28 7 16 11 9 17 7 23 9z"/><path d="M23 10c-3 4-3 8 0 11" opacity=".55"/></g>
+  <g id="stars" transform="translate(150 0)"><path d="m9 15 2 5 5 2-5 2-2 5-2-5-5-2 5-2zM22 32l1.4 3.6L27 37l-3.6 1.4L22 42l-1.4-3.6L17 37l3.6-1.4zM22 9l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></g>
+  <g id="grass" transform="translate(180 0)"><path d="M1 45c9-3 18-3 29 0M5 44l-2-10M9 44l4-15M14 44l-1-11M19 44l5-14M24 44l-1-10M28 44l3-8"/><path d="M2 47c9 2 20 2 29 0" opacity=".55"/></g>
+  <g id="city" transform="translate(210 0)"><path d="M1 45h29M3 45V33h6v12M10 45V22h8v23M19 45V29h7v16M27 45V36h3v9M13 27h2m-2 5h2m-2 5h2M5 37h2m14-3h2"/><path d="M0 48c8-2 19-2 30 0" opacity=".55"/></g>
+</svg>
