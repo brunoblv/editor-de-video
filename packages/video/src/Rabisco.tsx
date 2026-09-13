@@ -80,6 +80,12 @@ const HEAD_SPLIT: Partial<Record<RabiscoScene['action'], number>> = {
   walking: 0.32,
   music: 0.32,
   sharing: 0.32,
+  speaking: 0.46,
+  pointing: 0.46,
+  waving: 0.46,
+  surprised: 0.46,
+  celebrating: 0.46,
+  sad: 0.48,
 };
 const DEFAULT_HEAD_SPLIT = 0.4;
 
@@ -102,6 +108,12 @@ const ACTION_MOTION: Record<RabiscoScene['action'], MotionPreset> = {
   walking: 'gait',
   music: 'rhythm',
   sharing: 'offer',
+  speaking: 'idle',
+  pointing: 'idle',
+  waving: 'idle',
+  surprised: 'idle',
+  celebrating: 'gait',
+  sad: 'idle',
 };
 
 /** Balanço leve e contínuo, compartilhado por `idle` e `gait` (walking só muda o corpo). */

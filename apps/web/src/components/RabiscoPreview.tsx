@@ -27,6 +27,12 @@ const ACTION_LABEL: Record<RabiscoAction, string> = {
   sky: 'Olhando o céu — sol + estrelas',
   music: 'Música — fone + notas',
   sharing: 'Compartilhando — coração',
+  speaking: 'Falando (arte própria)',
+  pointing: 'Apontando (arte própria)',
+  waving: 'Acenando (arte própria)',
+  surprised: 'Surpreso (arte própria)',
+  celebrating: 'Comemorando (arte própria)',
+  sad: 'Triste (arte própria)',
 };
 
 const ANIMATION_LABEL: Record<RabiscoAnimation, string> = {

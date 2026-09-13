@@ -183,13 +183,8 @@ const ShareHeart: React.FC<{ frame: number }> = ({ frame }) => {
 };
 
 const PROP_BY_ACTION: Partial<Record<RabiscoAction, React.FC<{ frame: number }>>> = {
-  coffee: CoffeeCup,
-  writing: Notepad,
   reading: OpenBook,
-  learning: LearningSpark,
   sky: SkyLight,
-  music: MusicMoment,
-  sharing: ShareHeart,
 };
 
 /** `null` pras 3 ações com arte própria (thinking/sitting/walking) — sem prop. */

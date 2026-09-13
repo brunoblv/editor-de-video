@@ -239,7 +239,13 @@ export type RabiscoAction =
   | 'sky'
   | 'sitting'
   | 'sharing'
-  | 'learning';
+  | 'learning'
+  | 'speaking'
+  | 'pointing'
+  | 'waving'
+  | 'surprised'
+  | 'celebrating'
+  | 'sad';
 
 export type RabiscoPosition = 'center' | 'left' | 'right' | 'bottom';
 

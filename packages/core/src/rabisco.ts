@@ -33,7 +33,7 @@ export const RABISCO_EXPRESSIONS: Record<RabiscoEmotion, string> = {
 };
 
 /** Únicas 3 poses com arte real hoje — as demais ações reaproveitam uma delas. */
-export const RABISCO_BASE_POSES = ['thinking', 'sitting', 'walking'] as const;
+export const RABISCO_BASE_POSES = ['thinking', 'sitting', 'walking', 'coffee', 'writing', 'music', 'learning', 'sharing', 'speaking', 'pointing', 'waving', 'surprised', 'celebrating', 'sad'] as const;
 export type RabiscoBasePose = (typeof RABISCO_BASE_POSES)[number];
 
 /**
@@ -44,28 +44,40 @@ export type RabiscoBasePose = (typeof RABISCO_BASE_POSES)[number];
  */
 export const RABISCO_ACTION_POSE: Record<RabiscoAction, RabiscoBasePose> = {
   thinking: 'thinking',
-  coffee: 'thinking',
-  learning: 'thinking',
+  coffee: 'coffee',
+  learning: 'learning',
   sitting: 'sitting',
-  writing: 'sitting',
+  writing: 'writing',
   reading: 'sitting',
   sky: 'sitting',
   walking: 'walking',
-  music: 'walking',
-  sharing: 'walking',
+  music: 'music',
+  sharing: 'sharing',
+  speaking: 'speaking',
+  pointing: 'pointing',
+  waving: 'waving',
+  surprised: 'surprised',
+  celebrating: 'celebrating',
+  sad: 'sad',
 };
 
 export const RABISCO_ACTIONS: Record<RabiscoAction, string> = {
   thinking: `${BASE}/actions/thinking.png`,
-  writing: `${BASE}/actions/${RABISCO_ACTION_POSE.writing}.png`,
+  writing: `${BASE}/actions/writing-v2.png`,
   reading: `${BASE}/actions/${RABISCO_ACTION_POSE.reading}.png`,
-  coffee: `${BASE}/actions/${RABISCO_ACTION_POSE.coffee}.png`,
-  walking: `${BASE}/actions/walking.png`,
-  music: `${BASE}/actions/${RABISCO_ACTION_POSE.music}.png`,
+  coffee: `${BASE}/actions/coffee-v2.png`,
+  walking: `${BASE}/actions/walking-v2.png`,
+  music: `${BASE}/actions/music-v2.png`,
   sky: `${BASE}/actions/${RABISCO_ACTION_POSE.sky}.png`,
   sitting: `${BASE}/actions/sitting.png`,
-  sharing: `${BASE}/actions/${RABISCO_ACTION_POSE.sharing}.png`,
-  learning: `${BASE}/actions/${RABISCO_ACTION_POSE.learning}.png`,
+  sharing: `${BASE}/actions/sharing-v2.png`,
+  learning: `${BASE}/actions/learning-v2.png`,
+  speaking: `${BASE}/actions/speaking.png`,
+  pointing: `${BASE}/actions/pointing.png`,
+  waving: `${BASE}/actions/waving.png`,
+  surprised: `${BASE}/actions/surprised.png`,
+  celebrating: `${BASE}/actions/celebrating.png`,
+  sad: `${BASE}/actions/sad.png`,
 };
 
 /** Cada cena usa o asset de `action` — já expressivo o bastante para o MVP. */
