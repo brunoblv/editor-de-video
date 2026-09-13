@@ -1,6 +1,7 @@
 import { config } from '@editor-video/core';
 import type { Pillar } from './pillars.js';
 import { buildContentPrompt, contentResponseSchema } from './prompts/content.js';
+import { buildModelChain, withGeminiModelFallback } from '../gemini-fallback.js';
 
 export type GeneratedContent = {
   contentType: string;
@@ -81,24 +82,13 @@ function normalize(raw: unknown, pillar: Pillar): GeneratedContent {
   };
 }
 
-/** Gera o conteúdo estruturado via Gemini (Structured Outputs), nunca texto livre. */
-export async function generateContent(opts: {
-  pillar: Pillar;
-  verse: { reference: string; text: string } | null;
-}): Promise<GeneratedContent> {
+async function callGemini(model: string, system: string, user: string): Promise<unknown> {
   const apiKey = config.christian.geminiApiKey;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurado no .env.');
   }
 
-  const { system, user } = buildContentPrompt({
-    pillar: opts.pillar,
-    verse: opts.verse,
-    minDurationSec: config.christian.minDurationSec,
-    maxDurationSec: config.christian.maxDurationSec,
-  });
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.christian.geminiModel}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let response: Response;
   try {
@@ -132,12 +122,26 @@ export async function generateContent(opts: {
     throw new Error('Gemini retornou uma resposta vazia.');
   }
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     throw new Error('Gemini não retornou JSON válido apesar do schema estruturado.');
   }
+}
 
+/** Gera o conteúdo estruturado via Gemini (Structured Outputs), nunca texto livre. */
+export async function generateContent(opts: {
+  pillar: Pillar;
+  verse: { reference: string; text: string } | null;
+}): Promise<GeneratedContent> {
+  const { system, user } = buildContentPrompt({
+    pillar: opts.pillar,
+    verse: opts.verse,
+    minDurationSec: config.christian.minDurationSec,
+    maxDurationSec: config.christian.maxDurationSec,
+  });
+
+  const models = buildModelChain(config.christian.geminiModel, config.christian.geminiModelFallbacks);
+  const parsed = await withGeminiModelFallback(models, (model) => callGemini(model, system, user));
   return normalize(parsed, opts.pillar);
 }

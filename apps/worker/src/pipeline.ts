@@ -3,7 +3,9 @@ import path from 'node:path';
 import {
   config,
   getStorage,
+  resolveCaptionStyle,
   storageKeys,
+  type CaptionStyle,
   type RenderClip,
   type TopListProps,
 } from '@editor-video/core';
@@ -187,6 +189,7 @@ export async function runRenderPipeline(projectId: string): Promise<void> {
       title: project.title,
       watermark: project.watermark,
       clips: renderClips,
+      captionStyle: resolveCaptionStyle(project.captionStyle, config.captions.style as CaptionStyle),
     };
 
     await setProgress(projectId, CAPTIONS_END, 'Renderizando');

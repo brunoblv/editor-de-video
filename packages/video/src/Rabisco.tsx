@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, useCurrentFrame } from 'remotion';
 import type { RabiscoProps, RabiscoScene } from '@editor-video/core/render';
 import { Captions } from './components/Captions';
+import { RabiscoProp, sipPhase } from './components/RabiscoProp';
 
 /** Paper/off-white palette (RABISCO.md §12) — deliberadamente separada do
  * `theme.ts` escuro/bold dos outros pipelines; Rabisco é claro e introspectivo. */
@@ -63,38 +64,156 @@ function animationStyle(animation: RabiscoScene['animation'], local: number, tot
 }
 
 /**
- * Fronteira cabeça/corpo (fração da altura da imagem, de cima pra baixo),
- * estimada visualmente por pose — é um efeito de estilo, não uma costura
- * anatômica exata. `DEFAULT_HEAD_SPLIT` cobre qualquer ação sem entrada aqui.
+ * Fronteira cabeça/corpo (fração da altura da imagem, de cima pra baixo) —
+ * segue a pose real usada por cada ação (`RABISCO_ACTION_POSE` em
+ * `@editor-video/core/rabisco`), não a ação em si. `DEFAULT_HEAD_SPLIT` cobre
+ * qualquer ação sem entrada aqui.
  */
 const HEAD_SPLIT: Partial<Record<RabiscoScene['action'], number>> = {
   thinking: 0.43,
+  coffee: 0.43,
+  learning: 0.43,
   sitting: 0.38,
+  writing: 0.38,
+  reading: 0.38,
+  sky: 0.38,
   walking: 0.32,
+  music: 0.32,
+  sharing: 0.32,
 };
 const DEFAULT_HEAD_SPLIT = 0.4;
 
-/** Ações em que o corpo simula passada em vez de respiração parada. */
-const GAIT_ACTIONS = new Set<RabiscoScene['action']>(['walking']);
+type MotionPreset = 'idle' | 'gait' | 'sip' | 'gaze-up' | 'rhythm' | 'scribble' | 'scan' | 'offer';
 
-/** Balanço leve e contínuo da cabeça, fora de fase do corpo — RABISCO.md §11: pequenas
- * oscilações, nunca cinematográficas. */
-function headLayerStyle(frame: number): React.CSSProperties {
+/**
+ * Assinatura de movimento por ação — cada preset dá cabeça/corpo próprios
+ * pras 7 ações sem arte real, sem precisar de PNG novo (RABISCO_ANIMATION_ENGINE.md
+ * §11-14, adaptado pra rodar 100% em Remotion, sem IA). `idle`/`gait` são o
+ * comportamento original (thinking/sitting e walking), preservado ao pé da letra.
+ */
+const ACTION_MOTION: Record<RabiscoScene['action'], MotionPreset> = {
+  thinking: 'idle',
+  coffee: 'sip',
+  learning: 'idle',
+  sitting: 'idle',
+  writing: 'scribble',
+  reading: 'scan',
+  sky: 'gaze-up',
+  walking: 'gait',
+  music: 'rhythm',
+  sharing: 'offer',
+};
+
+/** Balanço leve e contínuo, compartilhado por `idle` e `gait` (walking só muda o corpo). */
+function idleHead(frame: number): React.CSSProperties {
   const rotateDeg = Math.sin(frame / 20) * 2.2;
   const bobPx = Math.sin(frame / 20 + Math.PI / 2) * 3;
   return { transform: `translateY(${bobPx}px) rotate(${rotateDeg}deg)`, transformOrigin: '50% 100%' };
 }
 
-/** Corpo: passada simulada (walking) ou respiração/balanço sutil (poses paradas). */
+const MOTION_PRESETS: Record<
+  MotionPreset,
+  { head: (frame: number) => React.CSSProperties; body: (frame: number) => React.CSSProperties }
+> = {
+  idle: {
+    head: idleHead,
+    body: (frame) => {
+      const breathe = 1 + Math.sin(frame / 30) * 0.015;
+      const sway = Math.sin(frame / 34) * 1.6;
+      return { transform: `scaleY(${breathe}) translateX(${sway}px)`, transformOrigin: '50% 100%' };
+    },
+  },
+  gait: {
+    head: idleHead,
+    body: (frame) => {
+      const bounce = Math.abs(Math.sin(frame / 6)) * -6;
+      const tilt = Math.sin(frame / 6) * 2.5;
+      return { transform: `translateY(${bounce}px) rotate(${tilt}deg)`, transformOrigin: '50% 100%' };
+    },
+  },
+  sip: {
+    head: (frame) => {
+      const phase = sipPhase(frame);
+      const rotateDeg = -1 - phase * 3 + Math.sin(frame / 20) * 0.8;
+      const bobPx = phase * 4 + Math.sin(frame / 20 + Math.PI / 2) * 1.5;
+      return { transform: `translateY(${bobPx}px) rotate(${rotateDeg}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const breathe = 1 + Math.sin(frame / 30) * 0.015;
+      const sway = Math.sin(frame / 34) * 0.8;
+      return { transform: `scaleY(${breathe}) translateX(${sway}px)`, transformOrigin: '50% 100%' };
+    },
+  },
+  'gaze-up': {
+    head: (frame) => {
+      const rise = interpolate(frame, [0, 28], [0, -7], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+      const riseY = interpolate(frame, [0, 28], [0, -6], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+      const drift = Math.sin(frame / 45) * 0.8;
+      return { transform: `translateY(${riseY}px) rotate(${rise + drift}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const breathe = 1 + Math.sin(frame / 50) * 0.012;
+      return { transform: `scaleY(${breathe})`, transformOrigin: '50% 100%' };
+    },
+  },
+  rhythm: {
+    head: (frame) => {
+      const rotateDeg = Math.sin(frame / 3.8) * 3;
+      const bobPx = Math.abs(Math.sin(frame / 3.8)) * -4;
+      return { transform: `translateY(${bobPx}px) rotate(${rotateDeg}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const bounce = Math.abs(Math.sin(frame / 3.8)) * -3;
+      const tilt = Math.sin(frame / 7.6) * 1.5;
+      return { transform: `translateY(${bounce}px) rotate(${tilt}deg)`, transformOrigin: '50% 100%' };
+    },
+  },
+  scribble: {
+    head: (frame) => {
+      const nod = Math.sin(frame / 5) * 1.2;
+      const drift = Math.sin(frame / 28) * 2;
+      return { transform: `translateX(${drift}px) rotate(${nod}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const lean = interpolate(frame, [0, 20], [0, 3], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+      const breathe = 1 + Math.sin(frame / 30) * 0.008;
+      return { transform: `scaleY(${breathe}) rotate(${lean}deg)`, transformOrigin: '50% 100%' };
+    },
+  },
+  scan: {
+    head: (frame) => {
+      const cycle = frame % 70;
+      const sweep = interpolate(cycle, [0, 55, 62, 70], [-4, 4, -4, -4], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+      const tilt = Math.sin(frame / 70) * 1;
+      return { transform: `translateX(${sweep}px) rotate(${tilt}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const breathe = 1 + Math.sin(frame / 30) * 0.015;
+      return { transform: `scaleY(${breathe}) rotate(2deg)`, transformOrigin: '50% 100%' };
+    },
+  },
+  offer: {
+    head: (frame) => {
+      const drift = Math.sin(frame / 40) * 0.8;
+      return { transform: `rotate(${-2 + drift}deg)`, transformOrigin: '50% 100%' };
+    },
+    body: (frame) => {
+      const lean = interpolate(frame, [6, 26], [0, 4], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+      const settle = Math.sin(frame / 40) * 0.8;
+      return { transform: `rotate(${lean + settle}deg)`, transformOrigin: '50% 100%' };
+    },
+  },
+};
+
+function headLayerStyle(action: RabiscoScene['action'], frame: number): React.CSSProperties {
+  return MOTION_PRESETS[ACTION_MOTION[action]].head(frame);
+}
+
 function bodyLayerStyle(action: RabiscoScene['action'], frame: number): React.CSSProperties {
-  if (GAIT_ACTIONS.has(action)) {
-    const bounce = Math.abs(Math.sin(frame / 6)) * -6;
-    const tilt = Math.sin(frame / 6) * 2.5;
-    return { transform: `translateY(${bounce}px) rotate(${tilt}deg)`, transformOrigin: '50% 100%' };
-  }
-  const breathe = 1 + Math.sin(frame / 30) * 0.015;
-  const sway = Math.sin(frame / 34) * 1.6;
-  return { transform: `scaleY(${breathe}) translateX(${sway}px)`, transformOrigin: '50% 100%' };
+  return MOTION_PRESETS[ACTION_MOTION[action]].body(frame);
 }
 
 const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position'] }> = ({ text, position }) => {
@@ -132,26 +251,31 @@ const CharacterScene: React.FC<{ scene: RabiscoScene }> = ({ scene }) => {
   const headSplit = HEAD_SPLIT[scene.action] ?? DEFAULT_HEAD_SPLIT;
   // As duas camadas se sobrepõem um pouco na costura (pescoço) — sem isso, a rotação/bob
   // independente de cada uma abre uma fresta visível mostrando o fundo entre elas.
-  const SEAM_OVERLAP = 0.03;
+  const SEAM_OVERLAP = 0.045;
   const headClip = `inset(0 0 ${Math.max(0, 1 - headSplit - SEAM_OVERLAP) * 100}% 0)`;
   const bodyClip = `inset(${Math.max(0, headSplit - SEAM_OVERLAP) * 100}% 0 0 0)`;
+  // O pivô de rotação da cabeça precisa ser o próprio pescoço (a costura), não o pé da
+  // imagem inteira — sem isso, qualquer rotação pequena "balança" a cabeça num raio enorme
+  // (do pescoço até o chão) e abre um corte feio na costura em vez de só inclinar a cabeça.
+  const headOrigin = `50% ${headSplit * 100}%`;
 
   return (
-    <AbsoluteFill style={POSITION_STYLE[scene.position]}>
+    <AbsoluteFill style={POSITION_STYLE.center}>
       <div style={{ width: CHARACTER_SIZE, position: 'relative', ...outerStyle }}>
         {/* Reserva a altura da caixa (as duas cópias animadas abaixo são absolutas). */}
         <Img
           src={scene.assetUrl}
           style={{ width: '100%', height: 'auto', display: 'block', visibility: 'hidden' }}
         />
-        <div style={{ position: 'absolute', inset: 0, ...headLayerStyle(frame) }}>
+        <div style={{ position: 'absolute', inset: 0, ...headLayerStyle(scene.action, frame), transformOrigin: headOrigin }}>
           <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block', clipPath: headClip }} />
         </div>
         <div style={{ position: 'absolute', inset: 0, ...bodyLayerStyle(scene.action, frame) }}>
           <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block', clipPath: bodyClip }} />
         </div>
+        <RabiscoProp action={scene.action} />
       </div>
-      {scene.thought ? <ThoughtBubble text={scene.thought} position={scene.position} /> : null}
+      {scene.thought ? <ThoughtBubble text={scene.thought} position="center" /> : null}
     </AbsoluteFill>
   );
 };
@@ -175,7 +299,15 @@ const RabiscoWatermark: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-export const Rabisco: React.FC<RabiscoProps> = ({ watermark, voiceoverUrl, musicUrl, musicVolume, scenes, captions }) => {
+export const Rabisco: React.FC<RabiscoProps> = ({
+  watermark,
+  voiceoverUrl,
+  musicUrl,
+  musicVolume,
+  scenes,
+  captions,
+  captionStyle,
+}) => {
   const total = Math.max(1, ...scenes.map((scene) => scene.startFrame + scene.durationInFrames));
 
   return (
@@ -202,7 +334,7 @@ export const Rabisco: React.FC<RabiscoProps> = ({ watermark, voiceoverUrl, music
         />
       ) : null}
 
-      {captions.length > 0 ? <Captions captions={captions} /> : null}
+      {captions.length > 0 ? <Captions captions={captions} captionStyle={captionStyle} background="light" /> : null}
 
       {watermark ? <RabiscoWatermark text={watermark} /> : null}
     </AbsoluteFill>

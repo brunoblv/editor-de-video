@@ -92,6 +92,9 @@ model Project {
   status    ProjectStatus @default(DRAFT)
   kind      ProjectKind   @default(TOP_LIST)
 
+  /// Estilo visual das legendas: minimal | highlight | handwritten (docs/Cristão/projeto.md)
+  captionStyle String? @default("minimal")
+
   /// Dono do projeto (nullable só para backfill de dados legados)
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)

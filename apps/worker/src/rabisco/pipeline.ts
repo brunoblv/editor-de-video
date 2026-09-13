@@ -4,10 +4,13 @@ import {
   config,
   getStorage,
   repoRoot,
+  resolveCaptionStyle,
   storageKeys,
   RABISCO_ACTIONS,
+  resolveRabiscoPose,
   type RabiscoAction,
   type CaptionSegment,
+  type CaptionStyle,
   type RabiscoProps,
   type RabiscoScene,
 } from '@editor-video/core';
@@ -81,11 +84,19 @@ async function copyCharacterAssets(
   // serveDirectory() serve tudo "achatado" (resolve só o basename da URL
   // contra a raiz de assetsDir) — nada de subpasta aqui, mesmo tratamento
   // dado a scene-N.mp4/voiceover.wav/music.*.
+  //
+  // Várias ações compartilham a mesma pose real (RABISCO_ACTION_POSE) — copia
+  // uma vez por pose, não por ação, pra não duplicar o mesmo PNG no disco.
   const urls: Partial<Record<RabiscoAction, string>> = {};
+  const copiedPoses = new Set<string>();
   for (const action of new Set(actions)) {
-    const srcPath = path.join(publicDir, RABISCO_ACTIONS[action]);
-    const fileName = `character-${action}.png`;
-    await fsp.copyFile(srcPath, path.join(assetsDir, fileName));
+    const pose = resolveRabiscoPose(action);
+    const fileName = `character-${pose}.png`;
+    if (!copiedPoses.has(pose)) {
+      const srcPath = path.join(publicDir, RABISCO_ACTIONS[action]);
+      await fsp.copyFile(srcPath, path.join(assetsDir, fileName));
+      copiedPoses.add(pose);
+    }
     urls[action] = `${baseUrl}/${fileName}`;
   }
   return urls as Record<RabiscoAction, string>;
@@ -203,6 +214,7 @@ export async function runRabiscoPipeline(projectId: string): Promise<void> {
       musicVolume: config.music.volume,
       scenes,
       captions,
+      captionStyle: resolveCaptionStyle(project.captionStyle, config.captions.style as CaptionStyle),
     };
 
     // 6) Render

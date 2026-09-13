@@ -8,7 +8,11 @@ export {
   RABISCO_TAGLINE,
   RABISCO_EXPRESSIONS,
   RABISCO_ACTIONS,
+  RABISCO_BASE_POSES,
+  RABISCO_ACTION_POSE,
   resolveRabiscoAsset,
+  resolveRabiscoPose,
+  type RabiscoBasePose,
 } from './rabisco.js';
 export {
   COUNTDOWN_DURATION_FRAMES,
@@ -25,7 +29,10 @@ export {
   type AmbientPurpose,
   type AmbientSoundEvent,
   type AmbientVisualTimeline,
+  CAPTION_STYLES,
+  resolveCaptionStyle,
   type CaptionSegment,
+  type CaptionStyle,
   type CaptionWord,
   type CharacterState,
   type ChristianProps,

@@ -20,6 +20,25 @@ export type CaptionSegment = {
   words?: CaptionWord[];
 };
 
+/**
+ * Estilo visual das legendas, escolhido por vídeo (nunca por linha).
+ * - minimal: texto limpo, sem caixa, sem marcação — o padrão.
+ * - highlight: igual ao minimal, mas a palavra sendo narrada no momento
+ *   ganha uma marca de marca-texto (bege/amarelo).
+ * - handwritten: igual ao minimal, com fonte manuscrita.
+ * A última legenda do vídeo sempre ganha um tratamento especial (cartão
+ * escuro, texto em destaque) independente do estilo escolhido — reforça a
+ * frase de fechamento.
+ */
+export type CaptionStyle = 'minimal' | 'highlight' | 'handwritten';
+
+export const CAPTION_STYLES: CaptionStyle[] = ['minimal', 'highlight', 'handwritten'];
+
+/** Valida o valor vindo do banco/formulário, caindo no padrão configurado se inválido/ausente. */
+export function resolveCaptionStyle(value: string | null | undefined, fallback: CaptionStyle): CaptionStyle {
+  return CAPTION_STYLES.includes(value as CaptionStyle) ? (value as CaptionStyle) : fallback;
+}
+
 export type RenderClip = {
   /** URL absoluta do clipe já normalizado, servida pelo worker durante o render. */
   src: string;
@@ -38,6 +57,7 @@ export type TopListProps = {
   title: string;
   watermark: string | null;
   clips: RenderClip[];
+  captionStyle: CaptionStyle;
 };
 
 export const INTRO_DURATION_FRAMES = 75;
@@ -151,6 +171,7 @@ export type CuriosidadeProps = {
   scenes: CuriosidadeScene[];
   /** Legendas relativas ao início do vídeo completo. */
   captions: CaptionSegment[];
+  captionStyle: CaptionStyle;
 };
 
 export function curiosidadeDurationInFrames(props: CuriosidadeProps): number {
@@ -189,6 +210,7 @@ export type ChristianProps = {
   musicVolume: number;
   scenes: ChristianScene[];
   captions: CaptionSegment[];
+  captionStyle: CaptionStyle;
   /** Estado inicial e final do personagem — interpola linearmente ao longo do vídeo. */
   characterStart: CharacterState;
   characterEnd: CharacterState;
@@ -249,6 +271,7 @@ export type RabiscoProps = {
   musicVolume: number;
   scenes: RabiscoScene[];
   captions: CaptionSegment[];
+  captionStyle: CaptionStyle;
 };
 
 export function rabiscoDurationInFrames(props: RabiscoProps): number {

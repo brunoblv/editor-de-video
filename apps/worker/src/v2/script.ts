@@ -1,5 +1,6 @@
 import { config } from '@editor-video/core';
 import { logger } from '../logger.js';
+import { buildModelChain, withGeminiModelFallback } from '../gemini-fallback.js';
 
 const log = logger('curiosidade-script');
 
@@ -150,13 +151,13 @@ Regras:
   return { system, user: `Tema: ${topic}` };
 }
 
-async function generateViaGemini(system: string, user: string): Promise<string> {
+async function generateViaGemini(model: string, system: string, user: string): Promise<string> {
   const apiKey = config.christian.geminiApiKey;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurado no .env.');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.christian.geminiModel}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let response: Response;
   try {
@@ -196,7 +197,8 @@ async function generateViaGemini(system: string, user: string): Promise<string> 
 /** Gera roteiro Curiosidade via Gemini (JSON estruturado). */
 export async function generateScript(topic: string): Promise<GeneratedScript> {
   const { system, user } = buildPrompts(topic);
-  log.info(`gerando roteiro via Gemini (${config.christian.geminiModel})`);
-  const content = await generateViaGemini(system, user);
+  const models = buildModelChain(config.christian.geminiModel, config.christian.geminiModelFallbacks);
+  log.info(`gerando roteiro via Gemini (${models.join(', ')})`);
+  const content = await withGeminiModelFallback(models, (model) => generateViaGemini(model, system, user));
   return normalizeScript(extractJson(content), topic);
 }

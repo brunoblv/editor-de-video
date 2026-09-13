@@ -1,5 +1,6 @@
 import fsp from 'node:fs/promises';
 import { config } from '@editor-video/core';
+import { buildModelChain, withGeminiModelFallback } from '../../gemini-fallback.js';
 
 export class GeminiTtsUnavailableError extends Error {}
 
@@ -39,11 +40,11 @@ function sampleRateFromMimeType(mimeType: string | undefined): number {
   return match?.[1] ? Number(match[1]) : 24000;
 }
 
-async function callGeminiTts(group: GeminiTtsGroup): Promise<Buffer> {
+async function callGeminiTts(model: string, group: GeminiTtsGroup): Promise<Buffer> {
   const apiKey = config.christian.geminiApiKey;
   if (!apiKey) throw new GeminiTtsUnavailableError('GEMINI_API_KEY não configurado.');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.voiceDirector.geminiModel}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const prompt = `${group.styleInstruction}: ${group.text}`;
 
   let response: Response;
@@ -87,19 +88,25 @@ async function callGeminiTts(group: GeminiTtsGroup): Promise<Buffer> {
 }
 
 /**
- * Sintetiza um grupo de segmentos com Gemini TTS. Uma tentativa extra com
- * pequeno backoff em erros transitórios (rede/5xx); sem retry em 429.
+ * Tenta um modelo TTS com uma tentativa extra e pequeno backoff em erros
+ * transitórios (rede/5xx); em 429 (cota) não insiste no mesmo modelo — quem
+ * chama passa para o próximo modelo da cadeia.
  */
-export async function synthesizeGroupWithGeminiTts(group: GeminiTtsGroup, outputWav: string): Promise<void> {
+async function callGeminiTtsWithRetry(model: string, group: GeminiTtsGroup): Promise<Buffer> {
   try {
-    const wav = await callGeminiTts(group);
-    await fsp.writeFile(outputWav, wav);
+    return await callGeminiTts(model, group);
   } catch (err) {
     if (err instanceof GeminiTtsUnavailableError && /429|cota/i.test(err.message)) {
       throw err;
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const wav = await callGeminiTts(group);
-    await fsp.writeFile(outputWav, wav);
+    return callGeminiTts(model, group);
   }
+}
+
+/** Sintetiza um grupo de segmentos com Gemini TTS, com fallback entre modelos em caso de cota excedida. */
+export async function synthesizeGroupWithGeminiTts(group: GeminiTtsGroup, outputWav: string): Promise<void> {
+  const models = buildModelChain(config.voiceDirector.geminiModel, config.voiceDirector.geminiModelFallbacks);
+  const wav = await withGeminiModelFallback(models, (model) => callGeminiTtsWithRetry(model, group));
+  await fsp.writeFile(outputWav, wav);
 }

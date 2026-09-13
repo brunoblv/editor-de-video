@@ -572,6 +572,46 @@ frameCount, columns, rows, frameWidth, frameHeight, fps, loop}`), com o
 player de sprite em `Rabisco.tsx` via `background-position` (determinístico
 por frame, sem decodificar nova imagem a cada frame do Remotion).
 
+### 6.5 Cobrindo as 10 ações sem IA (aliasing de pose + presets + props)
+
+Um documento posterior (`docs/RABISCO_ANIMATION_ENGINE.md`) propôs um sistema
+bem maior — Director/Router/manifest/providers de IA local (LTX/WAN)/cache/
+fila dedicada/UI admin — pra resolver um problema concreto: só 3 das 10
+`RabiscoAction` têm arte real (`thinking`, `sitting`, `walking`); as outras 7
+apontavam pra PNGs placeholder de 1x1 pixel (personagem invisível nessas
+cenas). Decisão: sem GPU disponível pra IA local, ficou fora de escopo toda a
+arquitetura de roteamento entre tecnologias — sobrando só o Remotion, que já
+existia. A solução ficou inteiramente dentro de `packages/core`/`packages/video`,
+sem Prisma/fila/IA nova:
+
+- **`RABISCO_ACTION_POSE`** (`packages/core/src/rabisco.ts`) — mapeia cada uma
+  das 10 ações pra uma das 3 poses reais (`RABISCO_BASE_POSES`). `RABISCO_ACTIONS`
+  passou a ser *derivado* desse mapa (mesmas 10 chaves/ordem, então o enum do
+  prompt/schema do Gemini em `content.ts`/`gemini.ts` não mudou — sem bump de
+  `RABISCO_PROMPT_VERSION`). `resolveRabiscoPose(action)` expõe a pose
+  resolvida pro worker (`copyCharacterAssets` em `apps/worker/src/rabisco/pipeline.ts`
+  copia um PNG por pose, não por ação, evitando duplicar o mesmo arquivo).
+- **Presets de movimento** (`packages/video/src/Rabisco.tsx`) — `HEAD_SPLIT`
+  agora cobre as 10 ações (herdando o valor da pose usada). `headLayerStyle`/
+  `bodyLayerStyle` viraram wrappers finos sobre uma tabela `MOTION_PRESETS`
+  (`idle`/`gait`/`sip`/`gaze-up`/`rhythm`/`scribble`/`scan`/`offer`), cada um
+  uma função de `frame` no mesmo estilo `Math.sin`/`interpolate` de antes —
+  `idle` e `gait` são cópia literal do comportamento original
+  (thinking/sitting e walking), os outros seis dão a cada ação reaproveitada
+  uma assinatura de movimento própria (`ACTION_MOTION` faz o mapeamento).
+- **Props em SVG** (`packages/video/src/components/RabiscoProp.tsx`) — pras 7
+  ações sem arte própria, um overlay pequeno em SVG (xícara, caderno+lápis,
+  livro, lâmpada/spark, sol+estrelas, fone+notas, coração), traço preto com
+  dupla passada levemente deslocada (`Sketch`) pra imitar o estilo torto do
+  personagem. `sipPhase()` sincroniza a animação da xícara com o preset `sip`.
+  Montado dentro do `<div>` já animado pela câmera em `CharacterScene`, junto
+  do `ThoughtBubble`.
+- Nenhuma mudança em `RabiscoScene`/`RabiscoProps`/Prisma/fila — é puramente
+  visual, em cima do mesmo `assetUrl` único por cena.
+- Adicionar arte real pra uma dessas 7 ações no futuro é só trocar a entrada
+  dela em `RABISCO_ACTION_POSE` pra apontar pra si mesma — o preset de
+  movimento e o prop continuam funcionando por cima da arte nova.
+
 ---
 
 ## 7. `apps/web` — UI

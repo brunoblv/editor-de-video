@@ -13,7 +13,7 @@ import { Outro } from './components/Outro';
 import { Watermark } from './components/Watermark';
 import { theme } from './theme';
 
-export const TopList: React.FC<TopListProps> = ({ title, watermark, clips }) => {
+export const TopList: React.FC<TopListProps> = ({ title, watermark, clips, captionStyle }) => {
   let cursor = INTRO_DURATION_FRAMES;
 
   return (
@@ -33,7 +33,7 @@ export const TopList: React.FC<TopListProps> = ({ title, watermark, clips }) => 
               <CountdownCard rank={clip.rank} label={clip.label} />
             </Sequence>
             <Sequence from={clipFrom} durationInFrames={clip.durationInFrames}>
-              <ClipSegment clip={clip} />
+              <ClipSegment clip={clip} captionStyle={captionStyle} />
             </Sequence>
           </React.Fragment>
         );

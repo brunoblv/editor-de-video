@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { config } from '@editor-video/core/server';
+import { config, resolveCaptionStyle, type CaptionStyle } from '@editor-video/core/server';
 import { prisma, ProjectKind, ProjectStatus, selectDistinctPillars } from '@editor-video/db';
 import { requireUser } from '@/lib/auth-guards';
 import { renderQueue } from '@/lib/queue';
@@ -18,6 +18,7 @@ interface BatchBody {
   /** "YYYY-MM-DD" — quando ausente, usa hoje (empurrando pra amanhã horários já passados). */
   date?: unknown;
   watermark?: unknown;
+  captionStyle?: unknown;
 }
 
 /** Horário numa data específica. Sem data explícita, horários já passados hoje viram amanhã. */
@@ -70,6 +71,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     const watermarkRaw = typeof body.watermark === 'string' ? body.watermark.trim() : '';
     const watermark = watermarkRaw || config.christian.youtubeHandle || null;
 
+    const captionStyle = resolveCaptionStyle(
+      typeof body.captionStyle === 'string' ? body.captionStyle : null,
+      config.captions.style as CaptionStyle,
+    );
+
     const now = new Date();
     const pillars = await selectDistinctPillars(times.length, now);
 
@@ -89,6 +95,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           title: pillar.label,
           pillar: pillar.id,
           watermark,
+          captionStyle,
           userId: user.id,
           scheduledAt,
           status: ProjectStatus.QUEUED,

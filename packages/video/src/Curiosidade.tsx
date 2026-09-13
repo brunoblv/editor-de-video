@@ -48,6 +48,7 @@ export const Curiosidade: React.FC<CuriosidadeProps> = ({
   voiceoverUrl,
   scenes,
   captions,
+  captionStyle,
 }) => {
   let cursor = 0;
 
@@ -91,7 +92,7 @@ export const Curiosidade: React.FC<CuriosidadeProps> = ({
         </Sequence>
       ) : null}
 
-      {captions.length > 0 ? <Captions captions={captions} /> : null}
+      {captions.length > 0 ? <Captions captions={captions} captionStyle={captionStyle} background="dark" /> : null}
 
       {watermark ? <Watermark text={watermark} /> : null}
     </AbsoluteFill>

@@ -30,6 +30,7 @@ const defaultTopList: TopListProps = {
     { src: '', rank: 2, label: null, durationInFrames: 150 },
     { src: '', rank: 1, label: 'O melhor de todos', durationInFrames: 150 },
   ],
+  captionStyle: 'minimal',
 };
 
 const defaultCuriosidade: CuriosidadeProps = {
@@ -43,6 +44,7 @@ const defaultCuriosidade: CuriosidadeProps = {
     { src: '', durationInFrames: 120 },
   ],
   captions: [],
+  captionStyle: 'highlight',
 };
 
 const defaultChristian: ChristianProps = {
@@ -61,6 +63,7 @@ const defaultChristian: ChristianProps = {
     { src: '', durationInFrames: 150 },
   ],
   captions: [],
+  captionStyle: 'highlight',
   characterStart: {
     colorLevel: 0,
     lightLevel: 0,
@@ -116,8 +119,63 @@ const defaultRabisco: RabiscoProps = {
       animation: 'rise',
       assetUrl: '',
     },
+    {
+      startFrame: 330,
+      durationInFrames: 100,
+      emotion: 'reflexao',
+      action: 'coffee',
+      position: 'center',
+      animation: 'fade',
+      assetUrl: '',
+    },
+    {
+      startFrame: 430,
+      durationInFrames: 100,
+      emotion: 'ideia',
+      action: 'writing',
+      position: 'center',
+      animation: 'fade',
+      assetUrl: '',
+    },
+    {
+      startFrame: 530,
+      durationInFrames: 100,
+      emotion: 'reflexao',
+      action: 'reading',
+      position: 'center',
+      animation: 'fade',
+      assetUrl: '',
+    },
+    {
+      startFrame: 630,
+      durationInFrames: 100,
+      emotion: 'ideia',
+      action: 'learning',
+      position: 'center',
+      animation: 'fade',
+      assetUrl: '',
+    },
+    {
+      startFrame: 730,
+      durationInFrames: 120,
+      emotion: 'leveza',
+      action: 'music',
+      position: 'left',
+      animation: 'slide-left',
+      assetUrl: '',
+    },
+    {
+      startFrame: 850,
+      durationInFrames: 120,
+      emotion: 'gratidao',
+      action: 'sharing',
+      position: 'right',
+      animation: 'slide-right',
+      assetUrl: '',
+    },
   ],
   captions: [],
+  captionStyle: 'handwritten',
 };
 
 export const RemotionRoot: React.FC = () => (

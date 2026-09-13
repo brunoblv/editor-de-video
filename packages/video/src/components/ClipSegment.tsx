@@ -1,13 +1,13 @@
 import React from 'react';
 import { AbsoluteFill, OffthreadVideo, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
-import type { RenderClip } from '@editor-video/core/render';
+import type { CaptionStyle, RenderClip } from '@editor-video/core/render';
 import { Captions } from './Captions';
 import { shadow, theme } from '../theme';
 
 /** Duração do fade de entrada/saída de cada clipe, em frames. */
 const FADE = 8;
 
-export const ClipSegment: React.FC<{ clip: RenderClip }> = ({ clip }) => {
+export const ClipSegment: React.FC<{ clip: RenderClip; captionStyle: CaptionStyle }> = ({ clip, captionStyle }) => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
   const hasCaptions = Boolean(clip.captions?.length);
@@ -60,7 +60,9 @@ export const ClipSegment: React.FC<{ clip: RenderClip }> = ({ clip }) => {
         #{clip.rank}
       </div>
 
-      {hasCaptions ? <Captions captions={clip.captions!} raised={Boolean(clip.label)} /> : null}
+      {hasCaptions ? (
+        <Captions captions={clip.captions!} raised={Boolean(clip.label)} captionStyle={captionStyle} background="dark" />
+      ) : null}
 
       {clip.label ? (
         <div

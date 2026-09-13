@@ -1,6 +1,7 @@
 import fsp from 'node:fs/promises';
 import { config } from '@editor-video/core';
 import { logger } from './logger.js';
+import { buildModelChain, withGeminiModelFallback } from './gemini-fallback.js';
 import type { TranscriptResult, TranscriptSegment, TranscriptWord } from './whisper.js';
 
 const log = logger('gemini-captions');
@@ -214,15 +215,15 @@ function buildPrompt(durationSec: number, hintText?: string): string {
   ].join('\n');
 }
 
-async function callGemini(audioPath: string, durationSec: number, hintText?: string): Promise<TranscriptResult> {
+async function callGemini(
+  model: string,
+  audioPath: string,
+  durationSec: number,
+  hintText?: string,
+): Promise<TranscriptResult> {
   const apiKey = config.christian.geminiApiKey;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurado no .env — necessário para gerar legendas.');
-  }
-
-  const model = config.captions.geminiModel;
-  if (!model.trim()) {
-    throw new Error('GEMINI_CAPTIONS_MODEL / GEMINI_MODEL não configurado.');
   }
 
   const audio = await fsp.readFile(audioPath);
@@ -299,16 +300,12 @@ export async function transcribeAudioWithGemini(options: {
   durationSec: number;
   hintText?: string;
 }): Promise<TranscriptResult> {
-  log.info(`transcrevendo ${options.audioPath} (${options.durationSec.toFixed(1)}s)`);
-  try {
-    return await callGemini(options.audioPath, options.durationSec, options.hintText);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (/429|cota/i.test(message)) {
-      log.warn('cota Gemini — nova tentativa em 2s');
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      return callGemini(options.audioPath, options.durationSec, options.hintText);
-    }
-    throw err;
+  const models = buildModelChain(config.captions.geminiModel, config.captions.geminiModelFallbacks);
+  if (!models[0]) {
+    throw new Error('GEMINI_CAPTIONS_MODEL / GEMINI_MODEL não configurado.');
   }
+  log.info(`transcrevendo ${options.audioPath} (${options.durationSec.toFixed(1)}s) via ${models.join(', ')}`);
+  return withGeminiModelFallback(models, (model) =>
+    callGemini(model, options.audioPath, options.durationSec, options.hintText),
+  );
 }

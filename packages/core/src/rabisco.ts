@@ -3,6 +3,12 @@
  * Dados puros (sem Node), compartilhados entre o worker (prompt/direção de
  * cena) e o web (formulário, preview). Adicionar um asset novo é só um item
  * aqui — o código nunca deve espalhar caminhos de arquivo pelo projeto.
+ *
+ * Só existe arte real pra 3 poses (`RABISCO_BASE_POSES`). As outras 7 ações
+ * reaproveitam uma dessas poses como corpo (`RABISCO_ACTION_POSE`) — a
+ * distinção visual entre elas vem do preset de movimento e do prop SVG no
+ * Remotion, não de um PNG próprio. Dar arte real a uma ação nova é só trocar
+ * a entrada dela em `RABISCO_ACTION_POSE`.
  */
 import type { RabiscoAction, RabiscoEmotion } from './types.js';
 
@@ -26,20 +32,48 @@ export const RABISCO_EXPRESSIONS: Record<RabiscoEmotion, string> = {
   surpresa: `${BASE}/expressions/surpresa.png`,
 };
 
+/** Únicas 3 poses com arte real hoje — as demais ações reaproveitam uma delas. */
+export const RABISCO_BASE_POSES = ['thinking', 'sitting', 'walking'] as const;
+export type RabiscoBasePose = (typeof RABISCO_BASE_POSES)[number];
+
+/**
+ * Pose base usada pelo corpo de cada ação. Sem arte própria pras outras 7
+ * ações (`coffee`/`learning`/`writing`/`reading`/`sky`/`music`/`sharing`) —
+ * a distinção visual delas vem do preset de movimento + prop SVG no Remotion
+ * (packages/video/src/Rabisco.tsx e RabiscoProp.tsx), não do PNG.
+ */
+export const RABISCO_ACTION_POSE: Record<RabiscoAction, RabiscoBasePose> = {
+  thinking: 'thinking',
+  coffee: 'thinking',
+  learning: 'thinking',
+  sitting: 'sitting',
+  writing: 'sitting',
+  reading: 'sitting',
+  sky: 'sitting',
+  walking: 'walking',
+  music: 'walking',
+  sharing: 'walking',
+};
+
 export const RABISCO_ACTIONS: Record<RabiscoAction, string> = {
   thinking: `${BASE}/actions/thinking.png`,
-  writing: `${BASE}/actions/writing.png`,
-  reading: `${BASE}/actions/reading.png`,
-  coffee: `${BASE}/actions/coffee.png`,
+  writing: `${BASE}/actions/${RABISCO_ACTION_POSE.writing}.png`,
+  reading: `${BASE}/actions/${RABISCO_ACTION_POSE.reading}.png`,
+  coffee: `${BASE}/actions/${RABISCO_ACTION_POSE.coffee}.png`,
   walking: `${BASE}/actions/walking.png`,
-  music: `${BASE}/actions/music.png`,
-  sky: `${BASE}/actions/sky.png`,
+  music: `${BASE}/actions/${RABISCO_ACTION_POSE.music}.png`,
+  sky: `${BASE}/actions/${RABISCO_ACTION_POSE.sky}.png`,
   sitting: `${BASE}/actions/sitting.png`,
-  sharing: `${BASE}/actions/sharing.png`,
-  learning: `${BASE}/actions/learning.png`,
+  sharing: `${BASE}/actions/${RABISCO_ACTION_POSE.sharing}.png`,
+  learning: `${BASE}/actions/${RABISCO_ACTION_POSE.learning}.png`,
 };
 
 /** Cada cena usa o asset de `action` — já expressivo o bastante para o MVP. */
 export function resolveRabiscoAsset(action: RabiscoAction): string {
   return RABISCO_ACTIONS[action];
+}
+
+/** Pose real usada como corpo dessa ação (ver `RABISCO_ACTION_POSE`). */
+export function resolveRabiscoPose(action: RabiscoAction): RabiscoBasePose {
+  return RABISCO_ACTION_POSE[action];
 }

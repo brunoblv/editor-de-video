@@ -2,6 +2,7 @@ import { config } from '@editor-video/core';
 import type { RabiscoAction, RabiscoAnimation, RabiscoEmotion, RabiscoPosition } from '@editor-video/core';
 import { RABISCO_ACTIONS, RABISCO_EXPRESSIONS } from '@editor-video/core';
 import { buildContentPrompt, contentResponseSchema } from './prompts/content.js';
+import { buildModelChain, withGeminiModelFallback } from '../gemini-fallback.js';
 
 export type GeneratedCharacterScene = {
   startSec: number;
@@ -86,20 +87,13 @@ function normalize(raw: unknown, thought: string): GeneratedReflection {
   };
 }
 
-/** Gera roteiro + direção de cena via Gemini (Structured Outputs), nunca texto livre. */
-export async function generateReflection(opts: { thought: string }): Promise<GeneratedReflection> {
+async function callGemini(model: string, system: string, user: string): Promise<unknown> {
   const apiKey = config.rabisco.geminiApiKey;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY (ou RABISCO_GEMINI_API_KEY) não configurado no .env.');
   }
 
-  const { system, user } = buildContentPrompt({
-    thought: opts.thought,
-    minDurationSec: config.rabisco.minDurationSec,
-    maxDurationSec: config.rabisco.maxDurationSec,
-  });
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.rabisco.geminiModel}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let response: Response;
   try {
@@ -133,12 +127,22 @@ export async function generateReflection(opts: { thought: string }): Promise<Gen
     throw new Error('Gemini retornou uma resposta vazia.');
   }
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
     throw new Error('Gemini não retornou JSON válido apesar do schema estruturado.');
   }
+}
 
+/** Gera roteiro + direção de cena via Gemini (Structured Outputs), nunca texto livre. */
+export async function generateReflection(opts: { thought: string }): Promise<GeneratedReflection> {
+  const { system, user } = buildContentPrompt({
+    thought: opts.thought,
+    minDurationSec: config.rabisco.minDurationSec,
+    maxDurationSec: config.rabisco.maxDurationSec,
+  });
+
+  const models = buildModelChain(config.rabisco.geminiModel, config.rabisco.geminiModelFallbacks);
+  const parsed = await withGeminiModelFallback(models, (model) => callGemini(model, system, user));
   return normalize(parsed, opts.thought);
 }

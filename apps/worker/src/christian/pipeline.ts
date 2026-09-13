@@ -3,7 +3,9 @@ import path from 'node:path';
 import {
   config,
   getStorage,
+  resolveCaptionStyle,
   storageKeys,
+  type CaptionStyle,
   type ChristianProps,
   type CaptionSegment,
 } from '@editor-video/core';
@@ -314,6 +316,7 @@ export async function runChristianPipeline(projectId: string): Promise<void> {
       musicVolume: config.music.volume,
       scenes,
       captions,
+      captionStyle: resolveCaptionStyle(project.captionStyle, config.captions.style as CaptionStyle),
       characterStart,
       characterEnd,
     };

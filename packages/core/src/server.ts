@@ -16,3 +16,4 @@ export {
   type AmbientRenderMode,
   type RenderJobData,
 } from './queue.js';
+export { CAPTION_STYLES, resolveCaptionStyle, type CaptionStyle } from './types.js';

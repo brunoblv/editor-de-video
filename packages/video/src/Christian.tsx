@@ -77,6 +77,7 @@ export const Christian: React.FC<ChristianProps> = ({
   musicVolume,
   scenes,
   captions,
+  captionStyle,
 }) => {
   const total = Math.max(
     1,
@@ -133,7 +134,7 @@ export const Christian: React.FC<ChristianProps> = ({
 
       {ctaText ? <CtaOverlay text={ctaText} from={ctaFrom} total={total} /> : null}
 
-      {captions.length > 0 ? <Captions captions={captions} /> : null}
+      {captions.length > 0 ? <Captions captions={captions} captionStyle={captionStyle} background="dark" /> : null}
 
       {watermark ? <Watermark text={watermark} /> : null}
     </AbsoluteFill>

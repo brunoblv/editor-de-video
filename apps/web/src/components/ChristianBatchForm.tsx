@@ -5,6 +5,14 @@ import { useState, type FormEvent } from 'react';
 
 const DEFAULT_TIMES = ['10:00', '12:00', '15:00', '20:00'];
 
+type CaptionStyleOption = 'minimal' | 'highlight' | 'handwritten';
+
+const CAPTION_STYLE_LABELS: Record<CaptionStyleOption, string> = {
+  minimal: 'Minimalista — texto limpo, sem marcação',
+  highlight: 'Highlight — marca-texto na palavra narrada',
+  handwritten: 'Manuscrita — fonte à mão, tom introspectivo',
+};
+
 function todayLocalISO(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -17,6 +25,7 @@ export function ChristianBatchForm() {
   const router = useRouter();
   const [date, setDate] = useState(todayLocalISO());
   const [times, setTimes] = useState<string[]>(DEFAULT_TIMES);
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyleOption>('minimal');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ title: string; scheduledAt: string | null }[] | null>(null);
@@ -43,7 +52,7 @@ export function ChristianBatchForm() {
       const response = await fetch('/api/christian/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, times }),
+        body: JSON.stringify({ date, times, captionStyle }),
       });
       const payload = (await response.json()) as {
         projects?: { title: string; scheduledAt: string | null }[];
@@ -104,6 +113,22 @@ export function ChristianBatchForm() {
         <button type="button" className="ghost" disabled={saving || times.length >= 12} onClick={addTime}>
           + adicionar horário
         </button>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <label htmlFor="batch-caption-style">Estilo da legenda</label>
+        <select
+          id="batch-caption-style"
+          value={captionStyle}
+          onChange={(event) => setCaptionStyle(event.target.value as CaptionStyleOption)}
+          disabled={saving}
+        >
+          {(Object.keys(CAPTION_STYLE_LABELS) as CaptionStyleOption[]).map((option) => (
+            <option key={option} value={option}>
+              {CAPTION_STYLE_LABELS[option]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <button className="primary" type="submit" disabled={saving || times.length === 0}>

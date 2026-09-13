@@ -30,6 +30,25 @@ function bool(name: string, fallback: boolean): boolean {
   return ['1', 'true', 'yes', 'on'].includes(raw.toLowerCase());
 }
 
+function list(name: string, fallback: string[]): string[] {
+  const raw = process.env[name];
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const items = raw.split(',').map((item) => item.trim()).filter(Boolean);
+  return items.length > 0 ? items : fallback;
+}
+
+/**
+ * Cada modelo Gemini tem cota diária própria — quando o principal estoura
+ * (429), tentamos o próximo em vez de falhar a geração inteira.
+ */
+const DEFAULT_GEMINI_MODEL_FALLBACKS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3.7-flash',
+  'gemini-3.8-flash',
+  'gemini-3-flash',
+];
+
 export const config = {
   databaseUrl: str('DATABASE_URL', 'postgresql://editor:editor@localhost:55432/editor_video?schema=public'),
   redisUrl: str('REDIS_URL', 'redis://localhost:56379'),
@@ -54,9 +73,16 @@ export const config = {
   captions: {
     /** gemini (padrão) ou whisper. */
     provider: str('CAPTIONS_PROVIDER', 'gemini'),
+    /** Estilo visual padrão das legendas: minimal | highlight | handwritten. */
+    style: str('CAPTION_STYLE', 'minimal'),
     language: str('CAPTIONS_LANGUAGE', str('WHISPER_LANGUAGE', 'pt')),
     /** Modelo multimodal — precisa aceitar áudio. Vazio herda GEMINI_MODEL. */
     geminiModel: str('GEMINI_CAPTIONS_MODEL', str('GEMINI_MODEL', 'gemini-3.5-flash-lite')),
+    /** Modelos tentados em sequência quando o principal estoura a cota (429). */
+    geminiModelFallbacks: list(
+      'GEMINI_CAPTIONS_MODEL_FALLBACKS',
+      list('GEMINI_MODEL_FALLBACKS', DEFAULT_GEMINI_MODEL_FALLBACKS),
+    ),
   },
   whisper: {
     /** Fallback local quando CAPTIONS_PROVIDER=whisper ou o Gemini falha. */
@@ -111,6 +137,11 @@ export const config = {
     provider: str('TTS_PROVIDER', 'gemini'),
     geminiVoiceName: str('GEMINI_TTS_VOICE', 'Orus'),
     geminiModel: str('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+    /** Modelos TTS alternativos tentados em sequência em caso de 429 — cada um tem cota diária própria. */
+    geminiModelFallbacks: list('GEMINI_TTS_MODEL_FALLBACKS', [
+      'gemini-3.1-flash-tts-preview',
+      'gemini-2.5-pro-preview-tts',
+    ]),
   },
   music: {
     /** Pasta com faixas instrumentais royalty-free (.mp3/.wav/.m4a/.ogg), relativa à raiz do monorepo. */
@@ -121,6 +152,7 @@ export const config = {
   christian: {
     geminiApiKey: str('GEMINI_API_KEY', ''),
     geminiModel: str('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    geminiModelFallbacks: list('GEMINI_MODEL_FALLBACKS', DEFAULT_GEMINI_MODEL_FALLBACKS),
     /** Dias mínimos antes de reutilizar o mesmo versículo. */
     verseReuseDays: num('VERSE_REUSE_DAYS', 180),
     /** Dias mínimos antes de reutilizar o mesmo pilar de conteúdo. */
@@ -137,6 +169,10 @@ export const config = {
     /** Reaproveita a chave do Christian por padrão — permite override via env se precisar de cota separada. */
     geminiApiKey: str('RABISCO_GEMINI_API_KEY', str('GEMINI_API_KEY', '')),
     geminiModel: str('RABISCO_GEMINI_MODEL', 'gemini-3.5-flash-lite'),
+    geminiModelFallbacks: list(
+      'RABISCO_GEMINI_MODEL_FALLBACKS',
+      list('GEMINI_MODEL_FALLBACKS', DEFAULT_GEMINI_MODEL_FALLBACKS),
+    ),
     /** SHORT apenas no MVP (docs/RABISCO.md §23). */
     minDurationSec: num('RABISCO_MIN_DURATION_SEC', 30),
     maxDurationSec: num('RABISCO_MAX_DURATION_SEC', 45),

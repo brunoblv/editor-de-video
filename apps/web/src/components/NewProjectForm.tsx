@@ -5,6 +5,13 @@ import { useState, type FormEvent } from 'react';
 import { PILLARS } from '@editor-video/core/christian';
 
 type Mode = 'TOP_LIST' | 'CURIOSIDADE' | 'CHRISTIAN' | 'RABISCO';
+type CaptionStyleOption = 'minimal' | 'highlight' | 'handwritten';
+
+const CAPTION_STYLE_LABELS: Record<CaptionStyleOption, string> = {
+  minimal: 'Minimalista — texto limpo, sem marcação',
+  highlight: 'Highlight — marca-texto na palavra narrada',
+  handwritten: 'Manuscrita — fonte à mão, tom introspectivo',
+};
 
 export function NewProjectForm() {
   const router = useRouter();
@@ -14,6 +21,7 @@ export function NewProjectForm() {
   const [pillar, setPillar] = useState('');
   const [rabiscoThought, setRabiscoThought] = useState('');
   const [watermark, setWatermark] = useState('');
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyleOption>('minimal');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -25,12 +33,12 @@ export function NewProjectForm() {
     try {
       const body =
         mode === 'CURIOSIDADE'
-          ? { kind: 'CURIOSIDADE', topic, watermark }
+          ? { kind: 'CURIOSIDADE', topic, watermark, captionStyle }
           : mode === 'CHRISTIAN'
-            ? { kind: 'CHRISTIAN', pillar, watermark }
+            ? { kind: 'CHRISTIAN', pillar, watermark, captionStyle }
             : mode === 'RABISCO'
-              ? { kind: 'RABISCO', rabiscoThought, watermark }
-              : { kind: 'TOP_LIST', title, watermark };
+              ? { kind: 'RABISCO', rabiscoThought, watermark, captionStyle }
+              : { kind: 'TOP_LIST', title, watermark, captionStyle };
 
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -166,6 +174,21 @@ export function NewProjectForm() {
           placeholder="@seucanal"
           maxLength={40}
         />
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <label htmlFor="captionStyle">Estilo da legenda</label>
+        <select
+          id="captionStyle"
+          value={captionStyle}
+          onChange={(event) => setCaptionStyle(event.target.value as CaptionStyleOption)}
+        >
+          {(Object.keys(CAPTION_STYLE_LABELS) as CaptionStyleOption[]).map((option) => (
+            <option key={option} value={option}>
+              {CAPTION_STYLE_LABELS[option]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div style={{ marginTop: 16 }}>

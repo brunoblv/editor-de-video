@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { findPillar } from '@editor-video/core/christian';
-import { config } from '@editor-video/core/server';
+import { config, resolveCaptionStyle, type CaptionStyle } from '@editor-video/core/server';
 import { prisma, ProjectKind } from '@editor-video/db';
 import { requireUser } from '@/lib/auth-guards';
 import { ApiError, handle, json } from '@/lib/http';
@@ -26,6 +26,7 @@ interface CreateBody {
   topic?: unknown;
   pillar?: unknown;
   rabiscoThought?: unknown;
+  captionStyle?: unknown;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     const body = (await request.json()) as CreateBody;
     const watermarkRaw = typeof body.watermark === 'string' ? body.watermark.trim() : '';
     const watermark = watermarkRaw === '' ? null : watermarkRaw;
+
+    const captionStyle = resolveCaptionStyle(
+      typeof body.captionStyle === 'string' ? body.captionStyle : null,
+      config.captions.style as CaptionStyle,
+    );
 
     const kindRaw = typeof body.kind === 'string' ? body.kind : 'TOP_LIST';
     if (kindRaw !== 'TOP_LIST' && kindRaw !== 'CURIOSIDADE' && kindRaw !== 'CHRISTIAN' && kindRaw !== 'RABISCO') {
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           rabiscoThought,
           durationPreset: 'SHORT',
           watermark,
+          captionStyle,
           userId: user.id,
         },
       });
@@ -72,6 +79,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           title: pillar ? (findPillar(pillar)?.label ?? 'Canal Cristão') : 'Canal Cristão (a definir)',
           pillar,
           watermark: watermark ?? (config.christian.youtubeHandle || null),
+          captionStyle,
           userId: user.id,
         },
       });
@@ -94,6 +102,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           title,
           topic,
           watermark,
+          captionStyle,
           userId: user.id,
         },
       });
@@ -110,6 +119,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         kind: ProjectKind.TOP_LIST,
         title,
         watermark,
+        captionStyle,
         userId: user.id,
       },
     });

@@ -3,7 +3,9 @@ import path from 'node:path';
 import {
   config,
   getStorage,
+  resolveCaptionStyle,
   storageKeys,
+  type CaptionStyle,
   type CuriosidadeProps,
 } from '@editor-video/core';
 import { Prisma } from '@prisma/client';
@@ -210,6 +212,7 @@ export async function runCuriosidadePipeline(projectId: string): Promise<void> {
       voiceoverUrl: `${assets.baseUrl}/${voiceFileName}`,
       scenes,
       captions,
+      captionStyle: resolveCaptionStyle(project.captionStyle, config.captions.style as CaptionStyle),
     };
 
     // 6) Render

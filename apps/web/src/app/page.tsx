@@ -22,7 +22,8 @@ export default async function HomePage() {
       <h1>Editor de vídeo</h1>
       <p className="muted" style={{ marginBottom: 28 }}>
         Top List com upload manual, Curiosidade autônoma, ou{' '}
-        <a href="/ambient">Sons relaxantes / Ambient</a>.
+        <a href="/ambient">Sons relaxantes / Ambient</a>. Para testar movimentação e legendas sem
+        gerar nada, use o <a href="/preview">preview</a>.
       </p>
 
       <NewProjectForm />
