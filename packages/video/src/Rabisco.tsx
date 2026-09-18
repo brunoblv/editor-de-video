@@ -228,11 +228,12 @@ function bodyLayerStyle(action: RabiscoScene['action'], frame: number): React.CS
   return MOTION_PRESETS[ACTION_MOTION[action]].body(frame);
 }
 
-const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position'] }> = ({ text, position }) => {
+const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position']; emotion: RabiscoScene['emotion'] }> = ({ text, position, emotion }) => {
   const frame = useCurrentFrame();
   const opacity = interpolate(frame, [0, 10], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const align = position === 'left' ? 'flex-start' : position === 'right' ? 'flex-end' : 'center';
 
+  const negative = emotion === 'desabafo' || emotion === 'confuso';
   return (
     <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: align, paddingTop: 220, pointerEvents: 'none' }}>
       <div
@@ -245,16 +246,32 @@ const ThoughtBubble: React.FC<{ text: string; position: RabiscoScene['position']
           fontStyle: 'italic',
           fontSize: 40,
           color: paper.ink,
-          background: 'rgba(255,255,255,0.72)',
-          border: `2px solid ${paper.ink}`,
-          borderRadius: 28,
-          padding: '18px 26px',
+          background: 'rgba(255,255,255,0.76)',
+          border: `2px ${negative ? 'dashed' : 'solid'} ${paper.ink}`,
+          borderRadius: negative ? '42% 54% 46% 58%' : '48% 42% 52% 44%',
+          padding: '18px 26px 28px',
         }}
       >
+        {negative ? <span style={{ position: 'absolute', left: 20, top: 8, fontSize: 24, opacity: 0.38 }}>〰〰</span> : null}
         {text}
       </div>
     </AbsoluteFill>
   );
+};
+
+/** Cenários gráficos do kit Rabisco: usados só quando reforçam a cena. */
+const SceneDecor: React.FC<{ scene: RabiscoScene }> = ({ scene }) => {
+  const frame = useCurrentFrame();
+  const bob = Math.sin(frame / 30) * 3;
+  const ink = paper.ink;
+  if (scene.action === 'sky') {
+    const night = scene.emotion === 'reflexao' || scene.emotion === 'desabafo' || scene.emotion === 'confuso';
+    return <svg viewBox="0 0 260 170" width={260} height={170} style={{ position: 'absolute', right: 70, top: 95, transform: `translateY(${bob}px)` }} fill="none" stroke={ink} strokeWidth="4" strokeLinecap="round">{night ? <><path d="M158 24c-31 8-29 50 4 56-31 15-57-28-29-51 8-7 17-9 25-5Z" /><path d="m54 40 4 10 10 4-10 4-4 10-4-10-10-4 10-4ZM96 89l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z" /></> : <><circle cx="155" cy="68" r="25" /><path d="M155 25v13m0 60v13m-56-43h13m86 0h13m-84-39 9 9m38 38 9 9m0-56-9 9m-38 38-9 9" /></>}</svg>;
+  }
+  if (scene.action === 'walking') return <svg viewBox="0 0 420 100" width={420} height={100} style={{ position: 'absolute', bottom: 95, left: '50%', transform: 'translateX(-50%)', opacity: 0.65 }} fill="none" stroke={ink} strokeWidth="3" strokeLinecap="round"><path d="M0 80c125-8 286-8 420 0M12 80V56h32v24m12 0V27h38v53m12 0V48h31v32m16 0V20h42v60m14 0V43h28v37m10 0V59h19v21M0 87c120 5 289 5 420 0" /></svg>;
+  if (scene.action === 'thinking' || scene.action === 'sitting' || scene.action === 'coffee') return <svg viewBox="0 0 380 80" width={380} height={80} style={{ position: 'absolute', bottom: 105, left: '50%', transform: `translateX(calc(-50% + ${bob}px))`, opacity: 0.78 }} fill="none" stroke={ink} strokeWidth="3" strokeLinecap="round"><path d="M4 58c110-7 245-7 371 0M18 58 9 40m23 18 8-27m20 27-3-18m29 18 11-25m25 25-3-17m169 17 8-20m23 20-4-29m28 29 8-17M5 65c107 4 255 4 370 0" /></svg>;
+  if (scene.action === 'celebrating') return <svg viewBox="0 0 110 110" width={110} height={110} style={{ position: 'absolute', right: 100, top: 180, transform: `translateY(${bob}px)` }} fill="none" stroke={ink} strokeWidth="4" strokeLinecap="round"><path d="M54 85C10 53 29 17 54 38 79 17 98 53 54 85Z" /><path d="M50 15v10m-22 1 7 7m43-7-7 7" /></svg>;
+  return null;
 };
 
 const CharacterScene: React.FC<{ scene: RabiscoScene }> = ({ scene }) => {
@@ -286,8 +303,9 @@ const CharacterScene: React.FC<{ scene: RabiscoScene }> = ({ scene }) => {
           <Img src={scene.assetUrl} style={{ width: '100%', height: 'auto', display: 'block', clipPath: bodyClip }} />
         </div>
         <RabiscoProp action={scene.action} />
+        <SceneDecor scene={scene} />
       </div>
-      {scene.thought ? <ThoughtBubble text={scene.thought} position="center" /> : null}
+      {scene.thought ? <ThoughtBubble text={scene.thought} position="center" emotion={scene.emotion} /> : null}
     </AbsoluteFill>
   );
 };

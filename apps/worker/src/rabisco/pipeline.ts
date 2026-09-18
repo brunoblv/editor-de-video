@@ -21,8 +21,7 @@ import { logger } from '../logger.js';
 import { renderRabisco } from '../render.js';
 import { serveDirectory } from '../static-server.js';
 import { transcriptToCaptions, transcribeWav } from '../captions.js';
-import { directScript } from '../voice/director.js';
-import { synthesizeDirectedScript } from '../voice/synth.js';
+import { synthesizePlainNarration } from '../voice/synth.js';
 import { pickRandomTrack } from '../christian/music.js';
 import { generateReflection, type GeneratedCharacterScene } from './gemini.js';
 import { RABISCO_PROMPT_VERSION } from './prompts/content.js';
@@ -155,19 +154,15 @@ export async function runRabiscoPipeline(projectId: string): Promise<void> {
       },
     });
 
-    // 3) Voice Director + TTS (mesmo pipeline do Christian — só texto→áudio)
+    // 3) Uma única tomada evita pausas artificiais entre segmentos.
     await setProgress(projectId, 40, 'Gerando narração');
-    const directed = directScript(
-      { script: generated.narration, reflection: '', cta: '' },
-      { pillarId: 'rabisco', category: 'geral', voiceMoodHint: 'calm' },
-    );
-    log.info(`${projectId}: Voice Director — ${directed.segments.length} segmentos`);
-    const { provider: ttsProvider } = await synthesizeDirectedScript(
-      directed,
+    await synthesizePlainNarration(
+      generated.narration,
       voiceoverPath,
       path.join(workDir, 'voice-parts'),
+      'Fale em português do Brasil, com voz calma, íntima e natural. Mantenha uma única narração contínua, com pausas breves apenas onde a pontuação pedir.',
     );
-    log.info(`${projectId}: narração gerada via ${ttsProvider}`);
+    log.info(`${projectId}: narração contínua gerada via Gemini TTS`);
     const voiceInfo = await probe(voiceoverPath);
     const voiceSec = Math.max(voiceInfo.durationSec, config.rabisco.minDurationSec * 0.6);
     const voiceoverKey = storageKeys.voiceover(projectId);
