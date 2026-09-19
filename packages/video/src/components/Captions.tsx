@@ -2,6 +2,7 @@ import React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { CaptionSegment, CaptionStyle } from '@editor-video/core/render';
 import { PATRICK_HAND_FONT_FAMILY, usePatrickHandFont } from '../fonts';
+import { captionPage } from './caption-pages';
 
 const MAX_LINES = 2;
 /** ~40 chars por linha (recomendação: legendas legíveis, não apertadas). */
@@ -25,11 +26,13 @@ function paletteFor(background: 'dark' | 'light'): Palette {
 
 type Word = { text: string; startFrame: number; endFrame: number };
 
-function wordsFromText(text: string): Word[] {
-  return text
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => ({ text: w, startFrame: -1, endFrame: -1 }));
+function wordsFromText(text: string, start: number, end: number): Word[] {
+  const parts = text.split(/\s+/).filter(Boolean);
+  return parts.map((text, index) => ({
+    text,
+    startFrame: start + (end - start) * index / parts.length,
+    endFrame: start + (end - start) * (index + 1) / parts.length,
+  }));
 }
 
 /** Janela de ~2 linhas ao redor da palavra ativa — nunca revela palavra por palavra. */
@@ -157,7 +160,7 @@ export const Captions: React.FC<{
   const active = captions[fallbackIndex]!;
   const isLast = fallbackIndex === captions.length - 1;
 
-  const words: Word[] = active.words && active.words.length > 0 ? active.words : wordsFromText(active.text);
+  const words: Word[] = active.words && active.words.length > 0 ? active.words : wordsFromText(active.text, active.startFrame, active.endFrame);
   const highlightIndex = active.words
     ? words.findIndex((word) => frame >= word.startFrame && frame < Math.max(word.endFrame, word.startFrame + 1))
     : -1;
@@ -186,11 +189,9 @@ export const Captions: React.FC<{
       {useSpecial
         ? <SpecialCard text={active.text} style={captionStyle} />
         : (() => {
-            const lines = windowLines(words, highlightIndex);
-            let offset = 0;
+            const lines = captionPage(words, frame);
             return lines.map((line, index) => {
-              const localHighlight = highlightIndex - offset;
-              offset += line.length;
+              const localHighlight = line.findIndex((word) => word === words[highlightIndex]);
               return (
                 <StyledLine
                   key={index}

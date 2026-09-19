@@ -27,8 +27,8 @@ import sharp from 'sharp';
  */
 
 /** Abaixo disso: tinta (opaco). Acima: fundo (transparente). Entre os dois: rampa suave. */
-const INK_CUTOFF = 120;
-const BG_CUTOFF = 150;
+const INK_CUTOFF = 65;
+const BG_CUTOFF = 105;
 
 async function fixFile(file: string): Promise<void> {
   const img = sharp(file);
@@ -66,7 +66,8 @@ async function fixFile(file: string): Promise<void> {
     rgba[i * 4] = r;
     rgba[i * 4 + 1] = g;
     rgba[i * 4 + 2] = b;
-    rgba[i * 4 + 3] = alpha;
+    // Never make an already transparent pixel opaque again on repeated runs.
+    rgba[i * 4 + 3] = Math.min(data[idx + 3]!, alpha);
   }
 
   // Bounding box do conteúdo opaco, calculado direto do alpha (não usar sharp .trim() —

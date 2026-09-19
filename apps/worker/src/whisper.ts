@@ -135,8 +135,8 @@ function parseWhisperJson(raw: WhisperJsonFile): TranscriptResult {
 
     const words: TranscriptWord[] = [];
     for (const token of item.tokens ?? []) {
-      const wordText = (token.text ?? '').trim();
-      if (!wordText) continue;
+      const wordText = token.text ?? '';
+      if (!wordText.trim() || /^\[_.*_\]$/.test(wordText.trim())) continue;
       // Tokens do whisper.cpp às vezes vêm com espaços; agrupamos só tokens alfanuméricos úteis
       words.push({
         text: wordText,
@@ -223,7 +223,8 @@ async function runWhisperOnWav(wavPath: string, outBase: string): Promise<Transc
     wavPath,
     '-l',
     config.whisper.language,
-    '-oj',
+    '-ojf',
+    '-ml', '48', '-sow',
     '-of',
     outBase,
     '--no-prints',
@@ -242,7 +243,8 @@ async function runWhisperOnWav(wavPath: string, outBase: string): Promise<Transc
         wavPath,
         '-l',
         config.whisper.language,
-        '-oj',
+        '-ojf',
+        '-ml', '48', '-sow',
         '-of',
         outBase,
       ]);
