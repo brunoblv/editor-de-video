@@ -22,6 +22,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <nav className="row" style={{ gap: 16, alignItems: 'center' }}>
               {session?.user ? (
                 <>
+                  <a href="/hub" className="muted">
+                    Hub V3
+                  </a>
                   <a href="/" className="muted">
                     Projetos
                   </a>

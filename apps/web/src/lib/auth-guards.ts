@@ -45,6 +45,27 @@ export async function requireStorageKeyAccess(key: string): Promise<AuthUser> {
     return user;
   }
 
+  // V3: arquivos pertencem a um workspace; o acesso exige membership.
+  const workspaceIds = (
+    await prisma.membership.findMany({ where: { userId: user.id }, select: { workspaceId: true } })
+  ).map((m) => m.workspaceId);
+  const v3Asset = /^assets\/([^/]+)\//.exec(key);
+  if (v3Asset) {
+    if (!workspaceIds.includes(v3Asset[1]!)) throw new ApiError('Sem permissão para este arquivo.', 403);
+    return user;
+  }
+  if (key.startsWith('proxies/')) {
+    const asset = await prisma.asset.findFirst({ where: { proxyKey: key, workspaceId: { in: workspaceIds } }, select: { id: true } });
+    if (!asset) throw new ApiError('Sem permissão para este arquivo.', 403);
+    return user;
+  }
+  const v3Deliverable = /^deliverables\/([^/]+)\//.exec(key);
+  if (v3Deliverable) {
+    const project = await prisma.videoProject.findFirst({ where: { id: v3Deliverable[1]!, workspaceId: { in: workspaceIds } }, select: { id: true } });
+    if (!project) throw new ApiError('Sem permissão para este arquivo.', 403);
+    return user;
+  }
+
   const match = /^projects\/([^/]+)\//.exec(key);
   if (!match) {
     throw new ApiError('Chave de storage inválida.', 403);

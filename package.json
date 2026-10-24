@@ -10,7 +10,7 @@
   "scripts": {
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "build:packages": "npm run build -w @editor-video/core && npm run build -w @editor-video/db",
+    "build:packages": "npm run build -w @editor-video/core && npm run build -w @editor-video/timeline && npm run build -w @editor-video/domain && npm run build -w @editor-video/templates && npm run build -w @editor-video/integrations && npm run build -w @editor-video/db",
     "db:generate": "npm run generate -w @editor-video/db",
     "db:push": "npm run push -w @editor-video/db",
     "setup": "npm run build:packages && npm run db:generate && npm run db:push",
@@ -21,7 +21,11 @@
     "remotion:studio": "npm run studio -w @editor-video/video",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "christian:seed-bible": "npm run christian:seed-bible -w @editor-video/worker",
-    "generate:daily": "npm run christian:generate-daily -w @editor-video/worker"
+    "generate:daily": "npm run christian:generate-daily -w @editor-video/worker",
+    "dev:v3": "concurrently -n web,render,agent -c cyan,yellow,green \"npm run dev:web\" \"npm run dev -w @editor-video/render-worker\" \"npm run dev -w @editor-video/agent\"",
+    "test:v3": "npm test -w @editor-video/timeline && npm test -w @editor-video/domain && npm test -w @editor-video/integrations && npm test -w @editor-video/db && npm test -w @editor-video/agent",
+    "db:migrate:deploy": "npm run migrate:deploy -w @editor-video/db",
+    "v3:migrate-legacy": "npm run v3:migrate-legacy -w @editor-video/db --"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",

@@ -19,7 +19,10 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remotion": "^4.0.500",
-    "@editor-video/video": "*"
+    "@editor-video/video": "*",
+    "@editor-video/domain": "*",
+    "@editor-video/timeline": "*",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

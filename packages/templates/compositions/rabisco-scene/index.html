@@ -1,0 +1,52 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"thought","type":"string","label":"Pensamento","default":"Será que todo mundo sente isso às vezes?","maxLength":240},
+    {"id":"position","type":"enum","label":"Posição","default":"center","options":[{"value":"center","label":"Centro"},{"value":"left","label":"Esquerda"},{"value":"right","label":"Direita"},{"value":"bottom","label":"Baixo"}]},
+    {"id":"animation","type":"enum","label":"Animação","default":"fade","options":[{"value":"fade","label":"Fade"},{"value":"slide-left","label":"Desliza p/ esquerda"},{"value":"slide-right","label":"Desliza p/ direita"},{"value":"rise","label":"Sobe"},{"value":"float","label":"Flutua"},{"value":"zoom","label":"Zoom"}]},
+    {"id":"background","type":"color","label":"Papel","default":"#FAF7F0"},
+    {"id":"ink","type":"color","label":"Tinta","default":"#1E1E1E"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Cena do Rabisco</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--background); }
+      #character { position: absolute; width: 46%; max-height: 62%; object-fit: contain; left: 27%; top: 30%; }
+      #root[data-position='left'] #character { left: 6%; }
+      #root[data-position='right'] #character { left: 48%; }
+      #root[data-position='bottom'] #character { top: 42%; }
+      #bubble { position: absolute; left: 8%; right: 8%; top: 8%; padding: 3vh 4vw; border: 4px solid var(--ink); border-radius: 36px; background: #fff; color: var(--ink); font-family: 'Patrick Hand', 'Comic Sans MS', cursive; font-size: min(5vw, 4.4vh); line-height: 1.25; text-align: center; box-sizing: border-box; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <img id="character" class="clip" data-start="0" data-duration="__DURATION__" src="assets/character.png" alt="" />
+      <div id="bubble" class="clip" data-start="0" data-duration="__DURATION__" data-var-text="thought">Será que todo mundo sente isso às vezes?</div>
+    </div>
+    <script>
+      const vars = window.__hyperframes.getVariables();
+      document.getElementById('root').dataset.position = vars.position;
+      const tl = gsap.timeline({ paused: true });
+      const enter = {
+        fade: { opacity: 0 },
+        'slide-left': { x: 200, opacity: 0 },
+        'slide-right': { x: -200, opacity: 0 },
+        rise: { y: 160, opacity: 0 },
+        float: { y: 30, opacity: 0 },
+        zoom: { scale: 0.8, opacity: 0 },
+      }[vars.animation] || { opacity: 0 };
+      tl.from('#character', { ...enter, duration: 0.8, ease: 'power2.out' }, 0)
+        .from('#bubble', { opacity: 0, scale: 0.9, duration: 0.5, ease: 'back.out(1.6)' }, 0.5);
+      if (vars.animation === 'float') {
+        tl.to('#character', { y: -14, duration: 1.6, ease: 'sine.inOut', yoyo: true, repeat: 5 }, 0.8);
+      }
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>
