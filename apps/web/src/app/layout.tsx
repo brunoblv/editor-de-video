@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { auth, signOut } from '@/auth';
+import { auth, authRequired, signOut } from '@/auth';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -37,6 +37,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   <span className="muted" style={{ fontSize: 13 }}>
                     {session.user.email}
                   </span>
+                  {authRequired && (
                   <form
                     action={async () => {
                       'use server';
@@ -47,6 +48,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       Sair
                     </button>
                   </form>
+                  )}
                 </>
               ) : (
                 <>

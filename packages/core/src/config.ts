@@ -51,7 +51,7 @@ const DEFAULT_GEMINI_MODEL_FALLBACKS = [
 
 export const config = {
   databaseUrl: str('DATABASE_URL', 'postgresql://editor:editor@localhost:55432/editor_video?schema=public'),
-  redisUrl: str('REDIS_URL', 'redis://localhost:56379'),
+  redisUrl: str('REDIS_URL', 'redis://localhost:46379'),
   storage: {
     driver: str('STORAGE_DRIVER', 'local'),
     localDir: path.resolve(repoRoot, str('STORAGE_LOCAL_DIR', './storage')),

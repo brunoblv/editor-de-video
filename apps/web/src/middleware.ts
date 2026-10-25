@@ -21,6 +21,11 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Sem AUTH_REQUIRED=true o app é aberto: auth() cai no usuário local.
+  if (process.env.AUTH_REQUIRED !== 'true') {
+    return NextResponse.next();
+  }
+
   const isLoggedIn = Boolean(req.auth?.user?.id || req.auth?.user?.email);
 
   if (PUBLIC_PATHS.has(pathname)) {
