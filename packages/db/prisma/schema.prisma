@@ -357,6 +357,9 @@ model Recipe {
   updatedAt   DateTime        @updatedAt
   versions    RecipeVersion[]
   projects    Project[]
+  /// V3: canal dono da receita (vinculado na migração)
+  channelId   String?
+  channel     Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
 }
 
 model RecipeVersion {
@@ -389,4 +392,716 @@ model YouTubeChannel {
 
   @@unique([userId])
   @@index([channelId])
+}
+
+// ============================================================================
+// V3 — Hub de canais e edição por IA (docs/especificacao-v3-hub-editor-ia.md)
+// Modelos ADITIVOS: o legado acima permanece intacto até o corte controlado.
+// ============================================================================
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  REVIEWER
+}
+
+enum SocialPlatform {
+  YOUTUBE
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+}
+
+enum SocialAccountStatus {
+  CONNECTED
+  EXPIRED
+  REVOKED
+  ERROR
+}
+
+enum AssetKind {
+  VIDEO
+  AUDIO
+  IMAGE
+  FONT
+  CHARACTER
+  DOCUMENT
+}
+
+enum AssetStatus {
+  UPLOADING
+  UPLOADED
+  ANALYZING
+  READY
+  FAILED
+  MISSING
+}
+
+enum VideoProjectState {
+  DRAFT
+  EDITING
+  IN_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum JobState {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCEL_REQUESTED
+  CANCELLED
+}
+
+enum JobKind {
+  ANALYZE
+  TRANSCRIBE
+  RENDER_PREVIEW
+  RENDER_FINAL
+  RESOLVE_EXPORT
+  PUBLISH
+}
+
+enum DeliverableState {
+  PENDING
+  RENDERING
+  VALIDATING
+  READY
+  FAILED
+  SUPERSEDED
+}
+
+enum DeliverableKind {
+  PREVIEW
+  FINAL
+  COVER
+  CAPTIONS
+  RESOLVE_PACKAGE
+}
+
+enum DeliverableOrigin {
+  HUB
+  EXTERNAL
+  LEGACY
+}
+
+enum ApprovalDecision {
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
+enum PublicationState {
+  DRAFT
+  APPROVED
+  SCHEDULED
+  UPLOADING
+  PROCESSING_REMOTE
+  PUBLISHED
+  FAILED
+  UNKNOWN
+  CANCELLED
+}
+
+enum SocialPostState {
+  DRAFT
+  SCHEDULED
+  POSTED
+  CANCELLED
+}
+
+enum AgentRunState {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships    Membership[]
+  channels       Channel[]
+  socialAccounts SocialAccount[]
+  assets         Asset[]
+  projects       VideoProject[]
+}
+
+model Membership {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  role        WorkspaceRole @default(EDITOR)
+  createdAt   DateTime      @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+/// Marca editorial: público, idiomas, tom e regras. Não é conta social nem formato.
+model Channel {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  slug          String
+  name          String
+  /// false = nome provisório (decisão pendente, §22)
+  nameConfirmed Boolean   @default(true)
+  tagline       String?
+  languages     String[]  @default([])
+  /// ChannelRules (packages/domain/channels.ts): tom, regras, CTAs, calendário
+  rulesJson     Json
+  /// Configuração de domínio (receitas, pilares, personagem)
+  domainJson    Json
+  linkedBrand   String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  brandKits   BrandKitVersion[]
+  series      Series[]
+  templates   TemplateVersion[]
+  accounts    SocialAccount[]
+  projects    VideoProject[]
+  characters  CharacterProfile[]
+  recipes     Recipe[]
+  verseUsages VerseUsage[]
+  media       ChannelAsset[]
+  posts       SocialPost[]
+
+  @@unique([workspaceId, slug])
+}
+
+/// Conta real numa plataforma. Credenciais cifradas; nunca vão ao agente/front.
+model SocialAccount {
+  id                     String              @id @default(cuid())
+  workspaceId            String
+  workspace              Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// Associação editorial explícita (null = pendente)
+  channelId              String?
+  channel                Channel?            @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  platform               SocialPlatform
+  externalId             String
+  displayName            String?
+  capabilitiesJson       Json?
+  status                 SocialAccountStatus @default(CONNECTED)
+  /// AES-256-GCM (packages/db/src/v3/crypto.ts)
+  encryptedCredentials   String?
+  scopes                 String[]            @default([])
+  tokenExpiresAt         DateTime?
+  isTestAccount          Boolean             @default(false)
+  legacyYouTubeChannelId String?             @unique
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  publications Publication[]
+  approvals    ReviewApproval[]
+
+  @@unique([workspaceId, platform, externalId])
+  @@index([channelId])
+}
+
+/// Identidade visual imutável usada por uma edição.
+model BrandKitVersion {
+  id          String   @id @default(cuid())
+  channelId   String
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  version     Int
+  colorsJson  Json
+  fonts       String[] @default([])
+  logoAssetId String?
+  stylesJson  Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([channelId, version])
+}
+
+model Series {
+  id         String       @id @default(cuid())
+  channelId  String
+  channel    Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  slug       String
+  name       String
+  legacyKind ProjectKind?
+  configJson Json
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  projects VideoProject[]
+
+  @@unique([channelId, slug])
+}
+
+/// Estrutura visual/narrativa versionada. Versões são imutáveis.
+model TemplateVersion {
+  id               String   @id @default(cuid())
+  channelId        String
+  channel          Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  slug             String
+  version          Int
+  name             String
+  engine           String
+  paramsSchemaJson Json
+  defaultsJson     Json
+  createdAt        DateTime @default(now())
+
+  @@unique([channelId, slug, version])
+}
+
+model CharacterProfile {
+  id             String   @id @default(cuid())
+  channelId      String
+  channel        Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  profileJson    Json
+  /// Arte conferida (transparência/resolução) — §3.3
+  assetsVerified Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([channelId, slug])
+}
+
+/// Arquivo original imutável, identificado por hash.
+model Asset {
+  id             String         @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind           AssetKind
+  status         AssetStatus    @default(UPLOADING)
+  /// sha256 do original
+  sha256         String?
+  storageKey     String
+  proxyKey       String?
+  originalName   String
+  mimeType       String?
+  sizeBytes      BigInt?
+  durationSec    Float?
+  width          Int?
+  height         Int?
+  fpsNum         Int?
+  fpsDen         Int?
+  hasAudio       Boolean        @default(false)
+  mediaInfoJson  Json?
+  provider       String?
+  sourceUrl      String?
+  author         String?
+  license        String?
+  licenseVerdict LicenseVerdict @default(UNKNOWN)
+  attribution    String?
+  tags           String[]       @default([])
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  usages      AssetUsage[]
+  transcripts TranscriptVersion[]
+  channels    ChannelAsset[]
+  postMedia   SocialPostMedia[]
+
+  @@unique([workspaceId, sha256])
+  @@index([workspaceId, kind])
+}
+
+model AssetUsage {
+  id         String       @id @default(cuid())
+  assetId    String
+  asset      Asset        @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  projectId  String
+  project    VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisionId String?
+  createdAt  DateTime     @default(now())
+
+  @@unique([assetId, projectId])
+  @@index([projectId])
+}
+
+/// Transcrição do ORIGINAL; versões revisadas não cortam mídia.
+model TranscriptVersion {
+  id           String   @id @default(cuid())
+  assetId      String
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  version      Int
+  language     String
+  provider     String
+  model        String
+  cacheKey     String
+  segmentsJson Json
+  reviewed     Boolean  @default(false)
+  reviewedById String?
+  createdAt    DateTime @default(now())
+
+  @@unique([assetId, version])
+  @@index([cacheKey])
+}
+
+model VideoProject {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  channelId          String
+  channel            Channel           @relation(fields: [channelId], references: [id], onDelete: Restrict)
+  seriesId           String?
+  series             Series?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  title              String
+  briefing           String?
+  objective          String?
+  targetDurationSec  Int?
+  /// Formatos desejados, ex.: ["16:9","9:16"]
+  formats            String[]          @default([])
+  state              VideoProjectState @default(DRAFT)
+  currentRevisionId  String?           @unique
+  legacyKind         ProjectKind?
+  legacyProjectId    String?           @unique
+  legacyReadOnly     Boolean           @default(false)
+  legacySnapshotJson Json?
+  createdById        String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  currentRevision TimelineRevision?  @relation("CurrentRevision", fields: [currentRevisionId], references: [id])
+  revisions       TimelineRevision[] @relation("ProjectRevisions")
+  assetUsages     AssetUsage[]
+  agentRuns       AgentRun[]
+  jobs            RenderJob[]
+  deliverables    Deliverable[]
+  publications    Publication[]
+  comments        ReviewComment[]
+  verseUsages     VerseUsage[]
+
+  @@index([workspaceId, channelId])
+  @@index([state])
+}
+
+/// Versão imutável da edição (documento @editor-video/timeline).
+model TimelineRevision {
+  id                     String       @id @default(cuid())
+  projectId              String
+  project                VideoProject @relation("ProjectRevisions", fields: [projectId], references: [id], onDelete: Cascade)
+  number                 Int
+  parentRevisionId       String?
+  schemaVersion          Int
+  documentJson           Json
+  /// Hash do conteúdo editorial (sem origem)
+  editorialHash          String
+  authorType             String
+  authorUserId           String?
+  agentRunId             String?
+  command                String?
+  summary                String?
+  restoredFromRevisionId String?
+  createdAt              DateTime     @default(now())
+
+  currentOf    VideoProject? @relation("CurrentRevision")
+  deliverables Deliverable[]
+
+  @@unique([projectId, number])
+  @@index([projectId, createdAt])
+}
+
+model AgentRun {
+  id               String        @id @default(cuid())
+  projectId        String
+  project          VideoProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId           String?
+  command          String
+  model            String
+  state            AgentRunState @default(RUNNING)
+  baseRevisionId   String?
+  resultRevisionId String?
+  planJson         Json?
+  toolCallsJson    Json?
+  responseText     String?
+  inputTokens      Int?
+  outputTokens     Int?
+  cacheReadTokens  Int?
+  costUsd          Float?
+  durationMs       Int?
+  numTurns         Int?
+  sdkVersion       String?
+  sessionId        String?
+  errorMessage     String?
+  createdAt        DateTime      @default(now())
+  finishedAt       DateTime?
+
+  @@index([projectId, createdAt])
+}
+
+model RenderJob {
+  id              String       @id @default(cuid())
+  projectId       String
+  project         VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind            JobKind
+  state           JobState     @default(QUEUED)
+  queue           String
+  revisionId      String?
+  variantId       String?
+  deliverableId   String?
+  assetId         String?
+  paramsJson      Json?
+  progress        Float        @default(0)
+  stage           String?
+  attempts        Int          @default(0)
+  maxAttempts     Int          @default(3)
+  /// Lease do worker (local ou remoto via HTTPS)
+  leaseOwner      String?
+  leaseExpiresAt  DateTime?
+  heartbeatAt     DateTime?
+  errorMessage    String?
+  errorCategory   String?
+  environmentJson Json?
+  requestedById   String?
+  idempotencyKey  String?      @unique
+  createdAt       DateTime     @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  steps JobStep[]
+
+  @@index([state, queue])
+  @@index([projectId, createdAt])
+}
+
+/// Etapa idempotente de um job; o retry recomeça na etapa necessária.
+model JobStep {
+  id          String    @id @default(cuid())
+  jobId       String
+  job         RenderJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  name        String
+  cacheKey    String?
+  state       JobState  @default(QUEUED)
+  artifactKey String?
+  outputJson  Json?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  @@unique([jobId, name])
+  @@index([cacheKey])
+}
+
+/// Cache global de artefatos por chave de etapa (hash+params+modelo+pipeline).
+model ArtifactCache {
+  cacheKey    String   @id
+  step        String
+  artifactKey String?
+  outputJson  Json?
+  createdAt   DateTime @default(now())
+}
+
+model Deliverable {
+  id             String            @id @default(cuid())
+  projectId      String
+  project        VideoProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisionId     String?
+  revision       TimelineRevision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
+  variantId      String?
+  kind           DeliverableKind
+  origin         DeliverableOrigin @default(HUB)
+  state          DeliverableState  @default(PENDING)
+  presetVersion  String?
+  storageKey     String?
+  sha256         String?
+  sizeBytes      BigInt?
+  durationSec    Float?
+  width          Int?
+  height         Int?
+  planHash       String?
+  validationJson Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  approvals    ReviewApproval[]
+  publications Publication[]
+
+  @@index([projectId, createdAt])
+}
+
+/// Aprovação vinculada ao hash da entrega + metadados (impressão digital).
+model ReviewApproval {
+  id              String           @id @default(cuid())
+  deliverableId   String
+  deliverable     Deliverable      @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  socialAccountId String?
+  socialAccount   SocialAccount?   @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  fingerprint     String
+  metadataJson    Json
+  decision        ApprovalDecision
+  reviewerId      String
+  note            String?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@index([deliverableId])
+  @@index([fingerprint])
+}
+
+model ReviewComment {
+  id         String       @id @default(cuid())
+  projectId  String
+  project    VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  revisionId String
+  frame      Int
+  authorId   String
+  body       String
+  resolved   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@index([projectId, revisionId])
+}
+
+/// Distribuição de UMA entrega específica para UMA conta específica.
+model Publication {
+  id                  String           @id @default(cuid())
+  projectId           String
+  project             VideoProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliverableId       String?
+  deliverable         Deliverable?     @relation(fields: [deliverableId], references: [id], onDelete: Restrict)
+  socialAccountId     String?
+  socialAccount       SocialAccount?   @relation(fields: [socialAccountId], references: [id], onDelete: Restrict)
+  platform            SocialPlatform
+  state               PublicationState @default(DRAFT)
+  /// Chave de idempotência: entrega + conta + intenção
+  publicationKey      String?          @unique
+  intent              String           @default("main")
+  metadataJson        Json?
+  approvalId          String?
+  scheduledAt         DateTime?
+  /// Agendamento migrado do legado, aguardando revisão
+  requestedScheduleAt DateTime?
+  remoteId            String?
+  remoteUrl           String?
+  publishedAt         DateTime?
+  historical          Boolean          @default(false)
+  errorMessage        String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  attempts PublicationAttempt[]
+
+  @@index([state, scheduledAt])
+  @@index([socialAccountId])
+}
+
+model PublicationAttempt {
+  id                  String      @id @default(cuid())
+  publicationId       String
+  publication         Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  number              Int
+  outcome             String
+  resumableSessionUrl String?
+  remoteId            String?
+  bytesSent           BigInt?
+  errorMessage        String?
+  startedAt           DateTime    @default(now())
+  finishedAt          DateTime?
+
+  @@unique([publicationId, number])
+}
+
+/// Central de mídias: arquivo disponível para um canal. O original continua
+/// único no workspace (hash), então o mesmo arquivo pode estar em vários canais.
+model ChannelAsset {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([channelId, assetId])
+  @@index([assetId])
+}
+
+/// Post programado na agenda do canal, com mídia livre (imagem ou vídeo).
+/// Publicação de entrega renderizada continua em Publication.
+model SocialPost {
+  id          String          @id @default(cuid())
+  channelId   String
+  channel     Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title       String?
+  caption     String          @default("")
+  notes       String?
+  state       SocialPostState @default(DRAFT)
+  scheduledAt DateTime?
+  postedAt    DateTime?
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  media   SocialPostMedia[]
+  targets SocialPostTarget[]
+
+  @@index([channelId, state, scheduledAt])
+}
+
+model SocialPostMedia {
+  id       String     @id @default(cuid())
+  postId   String
+  post     SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  assetId  String
+  asset    Asset      @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  position Int
+
+  @@unique([postId, assetId])
+  @@index([assetId])
+}
+
+/// Uma rede de destino do post; cada rede é marcada como postada separadamente.
+model SocialPostTarget {
+  id        String         @id @default(cuid())
+  postId    String
+  post      SocialPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform  SocialPlatform
+  postedAt  DateTime?
+  remoteUrl String?
+
+  @@unique([postId, platform])
+}
+
+/// Uso editorial de versículo por PEÇA (não por distribuição).
+model VerseUsage {
+  id        String       @id @default(cuid())
+  verseId   String
+  projectId String
+  project   VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  channelId String
+  channel   Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  usedAt    DateTime     @default(now())
+
+  @@unique([verseId, projectId])
+  @@index([channelId, usedAt])
+}
+
+model MigrationRun {
+  id         String    @id @default(cuid())
+  sourceRef  String
+  dryRun     Boolean
+  status     String
+  reportJson Json?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  mappings LegacyMapping[]
+}
+
+/// Origem → destino da migração; torna a execução idempotente.
+model LegacyMapping {
+  id             String        @id @default(cuid())
+  sourceTable    String
+  sourceId       String
+  targetTable    String
+  targetId       String
+  migrationRunId String?
+  migrationRun   MigrationRun? @relation(fields: [migrationRunId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+
+  @@unique([sourceTable, sourceId, targetTable])
+  @@index([targetTable, targetId])
 }

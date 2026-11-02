@@ -1,0 +1,42 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"title","type":"string","label":"Title","default":"Rainy Cabin at Midnight","maxLength":120},
+    {"id":"subtitle","type":"string","label":"Subtitle","default":"Heavy Rain & Fireplace","maxLength":200},
+    {"id":"accent","type":"color","label":"Accent","default":"#C9B37E"},
+    {"id":"background","type":"color","label":"Background","default":"#0B1020"},
+    {"id":"textColor","type":"color","label":"Text","default":"#F2EFE6"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Midnight Title Card</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.06), transparent 60%), var(--background); }
+      .clip { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 8%; box-sizing: border-box; }
+      #title { margin: 0; color: var(--textColor); font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 500; font-size: min(7vw, 12vh); letter-spacing: 0.02em; line-height: 1.1; }
+      #rule { width: 12%; height: 2px; background: var(--accent); margin: 3vh 0; }
+      #subtitle { margin: 0; color: var(--accent); font-family: Inter, system-ui, sans-serif; font-size: min(2.6vw, 4.5vh); letter-spacing: 0.18em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="card" class="clip" data-start="0" data-duration="__DURATION__">
+        <h1 id="title" data-var-text="title">Rainy Cabin at Midnight</h1>
+        <div id="rule"></div>
+        <p id="subtitle" data-var-text="subtitle">Heavy Rain &amp; Fireplace</p>
+      </section>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.from('#title', { opacity: 0, y: 24, duration: 1.6, ease: 'power2.out' }, 0.3)
+        .from('#rule', { scaleX: 0, duration: 1.2, ease: 'power2.inOut' }, 0.9)
+        .from('#subtitle', { opacity: 0, duration: 1.4, ease: 'power1.out' }, 1.3);
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

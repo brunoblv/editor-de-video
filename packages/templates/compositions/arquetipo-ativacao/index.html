@@ -1,0 +1,199 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"name","type":"string","label":"Arquétipo","default":"Tranca Ruas","maxLength":28},
+    {"id":"epithet","type":"string","label":"Epíteto","default":"Guardião das Encruzilhadas","maxLength":60},
+    {"id":"gift1Title","type":"string","label":"Dádiva I","default":"Caminhos abertos","maxLength":28},
+    {"id":"gift1Text","type":"string","label":"Dádiva I: texto","default":"Clareza para ver a saída onde só havia encruzilhada.","maxLength":90},
+    {"id":"gift2Title","type":"string","label":"Dádiva II","default":"Limites firmes","maxLength":28},
+    {"id":"gift2Text","type":"string","label":"Dádiva II: texto","default":"Força para fechar as portas que drenam a sua energia.","maxLength":90},
+    {"id":"gift3Title","type":"string","label":"Dádiva III","default":"Coragem de decidir","maxLength":28},
+    {"id":"gift3Text","type":"string","label":"Dádiva III: texto","default":"Firmeza para escolher uma rua e seguir sem olhar para trás.","maxLength":90},
+    {"id":"asks","type":"string","label":"O que pede em troca","default":"Palavra cumprida e respeito ao próprio caminho.","maxLength":90},
+    {"id":"accent","type":"color","label":"Tinta do arquétipo","default":"#A81E22"},
+    {"id":"night","type":"color","label":"Noite","default":"#100C0D"},
+    {"id":"paper","type":"color","label":"Papel","default":"#F3ECDF"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Arquétipo: ativação à meia-noite</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--night); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--night); }
+      #stage { position: absolute; inset: 0; }
+      .label { margin: 0; font-family: 'Space Mono', monospace; font-size: 2.8vmin; letter-spacing: 0.3em; text-transform: uppercase; }
+
+      /* Noite: o selo-relógio chega à meia-noite. */
+      #night { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8%; box-sizing: border-box; text-align: center; color: var(--paper); }
+      #seal { width: 44vmin; height: 44vmin; margin: 5vmin 0 6vmin; overflow: visible; }
+      #title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; line-height: 1.05; }
+      #epithet { margin: 2.4vmin 0 0; font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 4.6vmin; line-height: 1.2; opacity: 0.82; }
+
+      /* Ativação: a tinta abre a noite a partir do selo; o papel vem atrás. */
+      .bloom { position: absolute; z-index: 2; width: 100vmax; height: 100vmax; overflow: visible; }
+
+      /* Página: o papel do arquétipo. A multiplicação funde o papel da arte ao fundo. */
+      #page { position: absolute; inset: 0; z-index: 3; background: var(--paper); }
+      #art { position: absolute; left: 0; top: 0; width: 100%; height: 66%; object-fit: cover; object-position: 50% 0; mix-blend-mode: multiply; }
+      #spatter { position: absolute; left: 0; top: 0; width: 100%; height: 62%; overflow: visible; }
+
+      /* Faixa de tinta: as dádivas entram uma a uma. */
+      #band { position: absolute; left: 0; right: 0; bottom: 0; height: 40%; z-index: 4; background: var(--night); color: var(--paper); }
+      #bandEdge { position: absolute; left: -2%; width: 104%; top: -3.4vmin; height: 7vmin; overflow: visible; }
+      #bandLabel { position: absolute; left: 8%; right: 8%; top: 7%; color: var(--paper); opacity: 0.74; }
+      .slot { position: absolute; left: 8%; right: 8%; top: 18%; display: grid; grid-template-columns: 17vmin 1fr; column-gap: 3vmin; align-items: start; }
+      .numeral { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 15vmin; line-height: 0.95; color: color-mix(in srgb, var(--accent) 78%, var(--paper)); text-align: center; }
+      .giftTitle { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 7.8vmin; line-height: 1.06; }
+      .giftText { margin: 2vmin 0 0; font-family: 'EB Garamond', Georgia, serif; font-size: 5vmin; line-height: 1.2; opacity: 0.9; }
+      #closing { position: absolute; left: 8%; right: 8%; top: 7%; }
+      #asks { margin: 3vmin 0 0; font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 7vmin; line-height: 1.14; }
+      #signature { margin: 4vmin 0 0; color: var(--paper); opacity: 0.74; font-size: 2.8vmin; }
+
+      /* Horizontal: arte à esquerda, faixa à direita. */
+      @media (min-aspect-ratio: 1/1) {
+        #art { width: 50%; height: 100%; object-position: 50% 30%; }
+        #spatter { width: 50%; height: 100%; }
+        #band { left: 50%; top: 0; height: 100%; }
+        #bandEdge { display: none; }
+        #bandLabel, #closing { top: 20%; }
+        .slot { top: 30%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="stage" class="clip" data-start="0" data-duration="__DURATION__">
+        <div id="night">
+          <p id="kicker" class="label" data-layout-allow-occlusion>Arquétipo</p>
+          <svg id="seal" viewBox="0 0 100 100" aria-hidden="true">
+            <circle id="sealRing" cx="50" cy="50" r="48" fill="none" stroke="var(--paper)" stroke-width="0.6" pathLength="100" />
+            <circle id="sealTicks" cx="50" cy="50" r="43" fill="none" stroke="var(--paper)" stroke-width="3" pathLength="120" stroke-dasharray="0.8 9.2" stroke-dashoffset="0.4" />
+            <line id="handHour" x1="50" y1="50" x2="50" y2="24" stroke="var(--paper)" stroke-width="1.6" stroke-linecap="round" />
+            <line id="handMinute" x1="50" y1="50" x2="50" y2="11" stroke="var(--paper)" stroke-width="0.8" stroke-linecap="round" />
+            <circle id="sealCore" cx="50" cy="50" r="2.4" fill="var(--accent)" />
+          </svg>
+          <h1 id="title" data-layout-allow-occlusion data-var-text="name">Tranca Ruas</h1>
+          <p id="epithet" data-layout-allow-occlusion data-var-text="epithet">Guardião das Encruzilhadas</p>
+        </div>
+
+        <svg id="bloomInk" class="bloom" viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <filter id="inkEdge" x="-30%" y="-30%" width="160%" height="160%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="3" seed="7" />
+              <feDisplacementMap in="SourceGraphic" scale="9" />
+            </filter>
+          </defs>
+          <circle cx="50" cy="50" r="42" fill="var(--accent)" filter="url(#inkEdge)" />
+        </svg>
+        <svg id="bloomPaper" class="bloom" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="var(--paper)" filter="url(#inkEdge)" />
+        </svg>
+
+        <div id="page">
+          <img id="art" src="assets/arquetipo.png" alt="" />
+          <svg id="spatter" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <ellipse class="drop" cx="9" cy="24" rx="1.5" ry="0.85" fill="var(--accent)" />
+            <ellipse class="drop" cx="14" cy="61" rx="0.7" ry="0.4" fill="var(--night)" />
+            <ellipse class="drop" cx="6" cy="78" rx="1" ry="0.56" fill="var(--accent)" />
+            <ellipse class="drop" cx="90" cy="16" rx="0.8" ry="0.45" fill="var(--night)" />
+            <ellipse class="drop" cx="94" cy="44" rx="1.6" ry="0.9" fill="var(--accent)" />
+            <ellipse class="drop" cx="87" cy="70" rx="0.6" ry="0.34" fill="var(--accent)" />
+            <ellipse class="drop" cx="20" cy="9" rx="0.6" ry="0.34" fill="var(--accent)" />
+          </svg>
+        </div>
+
+        <div id="band">
+          <svg id="bandEdge" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <filter id="bandTear" x="-5%" y="-60%" width="110%" height="220%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.05 0.5" numOctaves="3" seed="11" />
+                <feDisplacementMap in="SourceGraphic" scale="6" />
+              </filter>
+            </defs>
+            <rect x="-2" y="3" width="104" height="9" fill="var(--night)" filter="url(#bandTear)" />
+          </svg>
+          <p id="bandLabel" class="label">Ao ativar, pode trazer</p>
+          <div id="gift1" class="slot">
+            <div class="numeral">I</div>
+            <div><h2 class="giftTitle" data-var-text="gift1Title">Caminhos abertos</h2><p class="giftText" data-var-text="gift1Text">Clareza para ver a saída onde só havia encruzilhada.</p></div>
+          </div>
+          <div id="gift2" class="slot">
+            <div class="numeral">II</div>
+            <div><h2 class="giftTitle" data-var-text="gift2Title">Limites firmes</h2><p class="giftText" data-var-text="gift2Text">Força para fechar as portas que drenam a sua energia.</p></div>
+          </div>
+          <div id="gift3" class="slot">
+            <div class="numeral">III</div>
+            <div><h2 class="giftTitle" data-var-text="gift3Title">Coragem de decidir</h2><p class="giftText" data-var-text="gift3Text">Firmeza para escolher uma rua e seguir sem olhar para trás.</p></div>
+          </div>
+          <div id="closing">
+            <p class="label" style="opacity: 0.74">Em troca, pede</p>
+            <p id="asks" data-var-text="asks">Palavra cumprida e respeito ao próprio caminho.</p>
+            <p id="signature" class="label">Mago da Meia-Noite</p>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script>
+      const vars = window.__hyperframes.getVariables();
+      const D = __DURATION__;
+      const landscape = window.innerWidth > window.innerHeight;
+      // Os tempos acompanham a duração do clipe: a meia-noite chega em 20% e o fechamento em 80%.
+      const MIDNIGHT = D * 0.2;
+      const BAND_IN = MIDNIGHT + D * 0.06;
+      const GIFTS_START = BAND_IN + D * 0.03;
+      const CLOSING = D * 0.8;
+      const SPAN = (CLOSING - GIFTS_START) / 3;
+      const FADE = Math.min(0.45, SPAN * 0.2);
+
+      // Nomes longos encolhem para caber em uma linha.
+      const title = document.getElementById('title');
+      const vmin = Math.min(window.innerWidth, window.innerHeight) / 100;
+      title.style.fontSize = `${Math.min(15, (15 * 11) / Math.max(1, vars.name.length)) * vmin}px`;
+
+      // A tinta nasce no centro do selo.
+      const box = document.getElementById('seal').getBoundingClientRect();
+      gsap.set('.bloom', { left: box.left + box.width / 2, top: box.top + box.height / 2, xPercent: -50, yPercent: -50, scale: 0 });
+
+      gsap.set('#sealRing', { strokeDasharray: 100, strokeDashoffset: 100 });
+      gsap.set('#sealTicks', { opacity: 0 });
+      gsap.set(['#handHour', '#handMinute'], { svgOrigin: '50 50' });
+      gsap.set('#handHour', { rotation: -48 });
+      gsap.set('#handMinute', { rotation: -432 });
+      gsap.set(['#kicker', '#title', '#epithet', '#page', '#bandLabel', '#closing', '.slot'], { opacity: 0 });
+      gsap.set(['#title', '#epithet'], { y: 18 });
+      gsap.set('#art', { scale: 1.06, transformOrigin: '50% 30%' });
+      gsap.set('.drop', { scale: 0, transformOrigin: 'center' });
+      gsap.set('#band', landscape ? { xPercent: 100 } : { yPercent: 112 });
+
+      const tl = gsap.timeline({ paused: true });
+      tl.to('#kicker', { opacity: 0.74, duration: 0.6, ease: 'power1.out' }, 0.1)
+        .to('#sealRing', { strokeDashoffset: 0, duration: MIDNIGHT * 0.5, ease: 'power2.inOut' }, 0)
+        .to('#sealTicks', { opacity: 0.85, duration: 0.5, ease: 'power1.out' }, MIDNIGHT * 0.2)
+        .to('#title', { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, MIDNIGHT * 0.15)
+        .to('#epithet', { opacity: 0.82, y: 0, duration: 0.7, ease: 'power3.out' }, MIDNIGHT * 0.3)
+        // Os ponteiros só se alinham exatamente na meia-noite.
+        .to('#handHour', { rotation: 0, duration: MIDNIGHT, ease: 'power2.in' }, 0)
+        .to('#handMinute', { rotation: 0, duration: MIDNIGHT, ease: 'power2.in' }, 0)
+        .to('#sealCore', { attr: { r: 5 }, duration: 0.14, ease: 'power2.out' }, MIDNIGHT - 0.1)
+        .to('#bloomInk', { scale: 3.4, duration: D * 0.07, ease: 'power3.in' }, MIDNIGHT)
+        .to('#bloomPaper', { scale: 3.4, duration: D * 0.07, ease: 'power3.in' }, MIDNIGHT + D * 0.012)
+        .set('#page', { opacity: 1 }, BAND_IN - 0.02)
+        .to('#art', { scale: 1, duration: D - BAND_IN, ease: 'none' }, BAND_IN)
+        .to('.drop', { scale: 1, duration: 0.3, ease: 'back.out(2.4)', stagger: 0.05 }, BAND_IN)
+        .to('#band', { xPercent: 0, yPercent: 0, duration: 0.6, ease: 'power3.out' }, BAND_IN)
+        .to('#bandLabel', { opacity: 0.74, duration: 0.4, ease: 'power1.out' }, GIFTS_START);
+      ['#gift1', '#gift2', '#gift3'].forEach((id, i) => {
+        const start = GIFTS_START + SPAN * i;
+        tl.fromTo(id, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: FADE, ease: 'power3.out' }, start);
+        tl.to(id, { opacity: 0, duration: FADE * 0.7, ease: 'power1.in' }, start + SPAN - FADE * 0.7);
+      });
+      tl.to('#bandLabel', { opacity: 0, duration: FADE * 0.7, ease: 'power1.in' }, CLOSING - FADE * 0.7)
+        .to('#closing', { opacity: 1, duration: 0.5, ease: 'power1.out' }, CLOSING);
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

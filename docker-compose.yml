@@ -22,7 +22,7 @@ services:
     container_name: editor-video-redis
     restart: unless-stopped
     ports:
-      - "56379:6379"
+      - "46379:6379"
     volumes:
       - redisdata:/data
     healthcheck:

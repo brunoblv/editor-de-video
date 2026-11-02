@@ -9,25 +9,40 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./v3": {
+      "types": "./dist/v3/index.d.ts",
+      "default": "./dist/v3/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "generate": "dotenv -e ../../.env -- prisma generate",
     "push": "dotenv -e ../../.env -- prisma db push",
     "migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "build": "npm run generate && tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "migrate:baseline": "dotenv -e ../../.env -- prisma migrate resolve --applied 0_legacy_baseline",
+    "v3:migrate-legacy": "dotenv -e ../../.env -- tsx src/v3/migrate-legacy.ts",
+    "test": "node --import tsx --test --test-timeout=60000 test/*.test.ts"
   },
   "dependencies": {
     "@editor-video/core": "*",
-    "@prisma/client": "^6.2.1"
+    "@prisma/client": "^6.2.1",
+    "@editor-video/domain": "*",
+    "@editor-video/timeline": "*",
+    "bullmq": "^5.34.10",
+    "@editor-video/integrations": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",
     "dotenv-cli": "^8.0.0",
     "prisma": "^6.2.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2"
   }
 }
