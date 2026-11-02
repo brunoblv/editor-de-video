@@ -355,6 +355,22 @@ export function buildAdditionalChannelSeeds(): ChannelSeed[] {
           },
           defaults: {},
         },
+        {
+          slug: 'mago-reflexao',
+          name: 'Reflexão do blog',
+          engine: 'hyperframes',
+          paramsSchema: {
+            type: 'object',
+            properties: {
+              eyebrow: { type: 'string', maxLength: 40 },
+              title: { type: 'string', maxLength: 90 },
+              quote: { type: 'string', maxLength: 240 },
+              closing: { type: 'string', maxLength: 60 },
+            },
+            required: ['title', 'quote'],
+          },
+          defaults: {},
+        },
       ],
       brandKit: { colors: {}, fonts: [], logoAssetKey: null },
       domain: {},

@@ -1,0 +1,76 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"eyebrow","type":"string","label":"Categoria","default":"Reflexões","maxLength":40},
+    {"id":"title","type":"string","label":"Título","default":"O primeiro silêncio da meia-noite","maxLength":90},
+    {"id":"quote","type":"string","label":"Citação","default":"O silêncio não chegou para me salvar. Chegou para me mostrar quem falava no meu lugar.","maxLength":240},
+    {"id":"closing","type":"string","label":"Assinatura","default":"magodameianoite.com","maxLength":60},
+    {"id":"accent","type":"color","label":"Destaque","default":"#A855F7"},
+    {"id":"background","type":"color","label":"Fundo","default":"#08050D"},
+    {"id":"textColor","type":"color","label":"Texto","default":"#F4EFF8"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Mago da Meia-Noite: reflexão</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 22%, rgba(109,40,168,0.42), transparent 62%), var(--background); }
+      .clip { position: absolute; inset: 0; box-sizing: border-box; }
+      .star { position: absolute; width: 0.5vmin; height: 0.5vmin; border-radius: 50%; background: #D8B4FE; }
+      #moon { position: absolute; left: 50%; top: 13%; width: 13vmin; height: 13vmin; margin-left: -6.5vmin; border-radius: 50%; box-shadow: inset -3.4vmin 1.2vmin 0 0 var(--accent); filter: drop-shadow(0 0 3vmin rgba(168,85,247,0.55)); transform: rotate(-18deg); }
+      #opening, #reflection { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 9%; }
+      #eyebrow { margin: 0 0 3.4vmin; color: var(--accent); font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 3vmin; letter-spacing: 0.24em; text-transform: uppercase; }
+      #title { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-weight: 500; font-size: 7.4vmin; line-height: 1.22; }
+      #rule { width: 16vmin; height: 2px; margin: 0 0 5vmin; background: var(--accent); }
+      #quote { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-size: 5.6vmin; line-height: 1.42; }
+      #closing { position: absolute; left: 0; right: 0; bottom: 9%; margin: 0; text-align: center; color: #D8B4FE; font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 3vmin; letter-spacing: 0.1em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="sky" class="clip" data-start="0" data-duration="__DURATION__"><div id="moon"></div></section>
+      <section id="opening" class="clip" data-start="0" data-duration="__DURATION__">
+        <p id="eyebrow" data-var-text="eyebrow">Reflexões</p>
+        <h1 id="title" data-var-text="title">O primeiro silêncio da meia-noite</h1>
+      </section>
+      <section id="reflection" class="clip" data-start="0" data-duration="__DURATION__">
+        <div id="rule"></div>
+        <p id="quote" data-var-text="quote">O silêncio não chegou para me salvar. Chegou para me mostrar quem falava no meu lugar.</p>
+      </section>
+      <section id="sign" class="clip" data-start="0" data-duration="__DURATION__">
+        <p id="closing" data-var-text="closing">magodameianoite.com</p>
+      </section>
+    </div>
+    <script>
+      // Estrelas em posições fixas: o render precisa ser determinístico (sem Math.random).
+      const sky = document.getElementById('sky');
+      const stars = [];
+      for (let i = 0; i < 34; i += 1) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = `${(i * 37.7) % 100}%`;
+        star.style.top = `${(i * 61.3) % 100}%`;
+        star.style.opacity = String(0.2 + ((i * 7) % 5) / 10);
+        sky.appendChild(star);
+        stars.push(star);
+      }
+
+      const duration = Number(document.getElementById('root').dataset.duration);
+      const tl = gsap.timeline({ paused: true });
+      tl.from(stars, { opacity: 0, duration: 1.6, stagger: 0.03, ease: 'power1.out' }, 0)
+        .from('#moon', { opacity: 0, scale: 0.7, duration: 1.8, ease: 'power2.out' }, 0.2)
+        .to('#moon', { y: '-2vmin', duration: duration - 2, ease: 'none' }, 2)
+        .from('#eyebrow', { opacity: 0, y: 16, duration: 0.9, ease: 'power2.out' }, 0.5)
+        .from('#title', { opacity: 0, y: 28, duration: 1.3, ease: 'power2.out' }, 0.8)
+        .to('#opening', { opacity: 0, y: -24, duration: 0.8, ease: 'power2.in' }, 4.4)
+        .from('#rule', { opacity: 0, scaleX: 0, duration: 0.9, ease: 'power2.inOut' }, 5.2)
+        .from('#quote', { opacity: 0, y: 24, duration: 1.3, ease: 'power2.out' }, 5.5)
+        .from('#closing', { opacity: 0, duration: 1.2, ease: 'power1.out' }, duration - 3.2);
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

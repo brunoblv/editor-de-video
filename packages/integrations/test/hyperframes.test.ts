@@ -21,6 +21,8 @@ describe('templates Hyperframes', () => {
     assert.equal(validateTemplateParams('rabisco-scene', { animation: 'explode' }).ok, false);
     assert.ok(validateTemplateParams('arquetipo-ativacao', { name: 'A Feiticeira', gift1Title: 'Intuição' }).ok);
     assert.equal(validateTemplateParams('arquetipo-ativacao', { name: 'x'.repeat(29) }).ok, false);
+    assert.ok(validateTemplateParams('mago-reflexao', { title: 'Caminhar sem mapa', quote: 'Uma citação.' }).ok);
+    assert.equal(validateTemplateParams('mago-reflexao', { quote: 'x'.repeat(241) }).ok, false);
   });
 
   it('materializa sandbox com GSAP local e exige arquivos declarados', async () => {
