@@ -65,6 +65,12 @@ Aplicar no banco real (depois do backup, §18.2): `npm run db:migrate:deploy` ap
 
 Limitações: **nada é publicado automaticamente** e não há aviso fora do hub (o post vencido só aparece na agenda). Conectar Instagram/TikTok/Facebook/YouTube exige apps aprovados nas plataformas, o publish-worker do Marco 4 e aprovação vinculada ao conteúdo, como em `Publication`. A agenda do canal não mostra as `Publication` de vídeos renderizados, que seguem em Calendário.
 
+### Arquétipos (Mago da Meia-Noite)
+
+Série `arquetipos` + template `arquetipo-ativacao@1` (Hyperframes, 20 s, feito para 9:16 e adaptado a 16:9). Identidade: na noite, os ponteiros de um selo-relógio se alinham à meia-noite; a tinta do arquétipo abre o papel e revela a arte em aquarela; três dádivas ("Ao ativar, pode trazer") entram numa faixa de tinta; fecha com "Em troca, pede". A cor `accent` muda por arquétipo; a arte entra em `$file:assets/arquetipo.png` e se funde ao fundo por multiplicação, então precisa ter fundo claro.
+
+Limitação: `SocialPost` não tem campo de tipo. A peça é montada no estúdio e o MP4 entra na agenda por upload em Mídias.
+
 ## Não verificado / limitações conhecidas
 
 - **Agente com o modelo real não foi executado**: não há `ANTHROPIC_API_KEY` configurada e o uso tem custo. As ferramentas foram testadas sem o modelo. Primeiro passo ao configurar: `GET http://127.0.0.1:4100/health` e um comando simples no estúdio.
