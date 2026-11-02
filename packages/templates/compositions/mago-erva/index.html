@@ -1,0 +1,138 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"eyebrow","type":"string","label":"Série","default":"Ervas","maxLength":40},
+    {"id":"hook","type":"string","label":"Abertura","default":"Por que tanta gente planta arruda na porta de casa?","maxLength":110},
+    {"id":"point1Title","type":"string","label":"Ponto 1: título","default":"Proteção","maxLength":24},
+    {"id":"point1Text","type":"string","label":"Ponto 1: texto","default":"Na tradição popular, ela é a planta do mau-olhado.","maxLength":130},
+    {"id":"point2Title","type":"string","label":"Ponto 2: título","default":"Limpeza","maxLength":24},
+    {"id":"point2Text","type":"string","label":"Ponto 2: texto","default":"Seus ramos aparecem em rezas e banhos de limpeza espiritual.","maxLength":130},
+    {"id":"point3Title","type":"string","label":"Ponto 3: título","default":"Cuidado","maxLength":24},
+    {"id":"point3Text","type":"string","label":"Ponto 3: texto","default":"Arruda não é chá. Ela é tóxica se ingerida.","maxLength":130},
+    {"id":"closing","type":"string","label":"Fechamento","default":"Força também pede respeito.","maxLength":70},
+    {"id":"cta","type":"string","label":"Chamada","default":"Leia o artigo no link da bio","maxLength":50},
+    {"id":"signature","type":"string","label":"Assinatura","default":"@o.magodameianoite","maxLength":40},
+    {"id":"hookSec","type":"number","label":"Duração da abertura (s)","default":4,"min":1,"max":20,"step":0.01},
+    {"id":"point1Sec","type":"number","label":"Duração do ponto 1 (s)","default":6,"min":1,"max":20,"step":0.01},
+    {"id":"point2Sec","type":"number","label":"Duração do ponto 2 (s)","default":6,"min":1,"max":20,"step":0.01},
+    {"id":"point3Sec","type":"number","label":"Duração do ponto 3 (s)","default":6,"min":1,"max":20,"step":0.01},
+    {"id":"accent","type":"color","label":"Destaque","default":"#A855F7"},
+    {"id":"background","type":"color","label":"Fundo","default":"#08050D"},
+    {"id":"textColor","type":"color","label":"Texto","default":"#F4EFF8"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Mago da Meia-Noite: erva</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 20%, rgba(109,40,168,0.4), transparent 62%), var(--background); }
+      .clip { position: absolute; inset: 0; box-sizing: border-box; }
+      .star { position: absolute; width: 0.45vmin; height: 0.45vmin; border-radius: 50%; background: #D8B4FE; }
+      #sprig { position: absolute; left: 50%; top: 6%; width: 62vmin; height: 62vmin; margin-left: -31vmin; overflow: visible; }
+      #sprig .leaf { fill: rgba(168,85,247,0.2); stroke: var(--accent); stroke-width: 1.1; }
+      #sprig .stem { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-linecap: round; }
+      #eyebrow { position: absolute; left: 0; right: 0; top: 4%; margin: 0; text-align: center; color: var(--accent); font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 2.8vmin; letter-spacing: 0.26em; text-transform: uppercase; }
+      .scene { position: absolute; left: 9%; right: 9%; top: 47%; bottom: 13%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0; }
+      .scene h1 { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-weight: 500; font-size: 7vmin; line-height: 1.24; }
+      .scene h2 { margin: 0 0 3.4vmin; color: #D8B4FE; font-family: Karla, 'DejaVu Sans', sans-serif; font-weight: 500; font-size: 3.6vmin; letter-spacing: 0.22em; text-transform: uppercase; }
+      .scene p { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-size: 5.3vmin; line-height: 1.4; }
+      #cta { margin-top: 4.5vmin; color: #D8B4FE; font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 3.8vmin; }
+      #signature { position: absolute; left: 0; right: 0; bottom: 6%; margin: 0; text-align: center; color: #A99EB0; font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 2.8vmin; letter-spacing: 0.08em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="sky" class="clip" data-start="0" data-duration="__DURATION__">
+        <svg id="sprig" viewBox="0 0 200 200" aria-hidden="true"></svg>
+      </section>
+      <section id="copy" class="clip" data-start="0" data-duration="__DURATION__">
+        <p id="eyebrow" data-var-text="eyebrow">Ervas</p>
+        <div id="hookScene" class="scene"><h1 data-var-text="hook">Por que tanta gente planta arruda na porta de casa?</h1></div>
+        <div id="scene1" class="scene"><h2 data-var-text="point1Title">Proteção</h2><p data-var-text="point1Text">Na tradição popular, ela é a planta do mau-olhado.</p></div>
+        <div id="scene2" class="scene"><h2 data-var-text="point2Title">Limpeza</h2><p data-var-text="point2Text">Seus ramos aparecem em rezas e banhos de limpeza espiritual.</p></div>
+        <div id="scene3" class="scene"><h2 data-var-text="point3Title">Cuidado</h2><p data-var-text="point3Text">Arruda não é chá. Ela é tóxica se ingerida.</p></div>
+        <div id="closeScene" class="scene"><h1 data-var-text="closing">Força também pede respeito.</h1><div id="cta" data-var-text="cta">Leia o artigo no link da bio</div></div>
+        <p id="signature" data-var-text="signature">@o.magodameianoite</p>
+      </section>
+    </div>
+    <script>
+      const vars = window.__hyperframes.getVariables();
+      const NS = 'http://www.w3.org/2000/svg';
+      const sprig = document.getElementById('sprig');
+      const sky = document.getElementById('sky');
+
+      // Estrelas em posições fixas: o render precisa ser determinístico (sem Math.random).
+      const stars = [];
+      for (let i = 0; i < 30; i += 1) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = `${(i * 37.7) % 100}%`;
+        star.style.top = `${(i * 61.3) % 100}%`;
+        star.style.opacity = String(0.2 + ((i * 7) % 5) / 10);
+        sky.appendChild(star);
+        stars.push(star);
+      }
+
+      // Ramo de arruda: haste com folhas divididas em lóbulos arredondados.
+      function add(tag, attrs, parent) {
+        const el = document.createElementNS(NS, tag);
+        for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+        parent.appendChild(el);
+        return el;
+      }
+      const stem = add('path', { class: 'stem', d: 'M100 196 C 98 150, 104 100, 100 34' }, sprig);
+      const groups = [];
+      function leafGroup(x, y, angle, length) {
+        const group = add('g', { transform: `translate(${x} ${y}) rotate(${angle})` }, sprig);
+        add('path', { class: 'stem', d: `M0 0 L0 ${-length}` }, group);
+        const lobes = Math.max(2, Math.round(length / 12));
+        for (let i = 1; i <= lobes; i += 1) {
+          const at = -(length * i) / lobes;
+          const size = 7.5 - i * 0.45;
+          for (const side of [-1, 1]) {
+            add('ellipse', { class: 'leaf', cx: side * (size * 0.95), cy: at + 1, rx: size, ry: size * 0.52, transform: `rotate(${side * -28} ${side * (size * 0.95)} ${at + 1})` }, group);
+          }
+        }
+        add('ellipse', { class: 'leaf', cx: 0, cy: -length - 6, rx: 3.8, ry: 7 }, group);
+        groups.push(group);
+      }
+      const nodes = [[180, 54], [152, 50], [124, 44], [98, 36], [74, 28]];
+      nodes.forEach(([y, length], i) => {
+        const x = 100 + (i % 2 ? 1 : -1) * 1.5;
+        leafGroup(x, y, -56 + i * 3, length);
+        leafGroup(x, y - 8, 56 - i * 3, length - 3);
+      });
+      leafGroup(100, 50, 0, 24);
+
+      const stemLength = stem.getTotalLength();
+      stem.style.strokeDasharray = stemLength;
+
+      const fade = 0.45;
+      const starts = [];
+      let cursor = 0;
+      for (const length of [vars.hookSec, vars.point1Sec, vars.point2Sec, vars.point3Sec]) {
+        starts.push(cursor);
+        cursor += length;
+      }
+      const duration = Number(document.getElementById('root').dataset.duration);
+      const sceneIds = ['#hookScene', '#scene1', '#scene2', '#scene3', '#closeScene'];
+      starts.push(cursor);
+
+      const tl = gsap.timeline({ paused: true });
+      tl.from(stars, { opacity: 0, duration: 1.4, stagger: 0.03, ease: 'power1.out' }, 0)
+        .from('#eyebrow', { opacity: 0, duration: 0.8 }, 0.2)
+        .from(stem, { strokeDashoffset: stemLength, duration: 1.6, ease: 'power1.inOut' }, 0)
+        .from(groups, { opacity: 0, scale: 0.4, transformOrigin: '50% 100%', duration: 0.7, stagger: 0.07, ease: 'power2.out' }, 0.3)
+        .to('#sprig', { rotation: 1.6, transformOrigin: '50% 100%', duration: duration, ease: 'sine.inOut' }, 0);
+      sceneIds.forEach((id, i) => {
+        tl.fromTo(id, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: fade, ease: 'power2.out' }, starts[i]);
+        if (i < sceneIds.length - 1) tl.to(id, { opacity: 0, y: -16, duration: fade * 0.7, ease: 'power2.in' }, starts[i + 1] - fade * 0.7);
+      });
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

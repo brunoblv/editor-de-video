@@ -39,6 +39,7 @@ export const TEMPLATES: TemplateDefinition[] = [
   { slug: 'rabisco-scene', version: 1, name: 'Cena do Rabisco', channelSlug: 'rabisco', engine: 'hyperframes', requiredFiles: ['assets/character.png'], defaultDurationSec: 5 },
   { slug: 'arquetipo-ativacao', version: 1, name: 'Arquétipo: ativação à meia-noite', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: ['assets/arquetipo.png'], defaultDurationSec: 20 },
   { slug: 'mago-reflexao', version: 1, name: 'Reflexão do blog', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 15 },
+  { slug: 'mago-erva', version: 1, name: 'Erva: tradição e cuidado', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 30 },
 ];
 
 export function getTemplate(slug: string, version?: number): TemplateDefinition {

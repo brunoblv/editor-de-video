@@ -23,6 +23,8 @@ describe('templates Hyperframes', () => {
     assert.equal(validateTemplateParams('arquetipo-ativacao', { name: 'x'.repeat(29) }).ok, false);
     assert.ok(validateTemplateParams('mago-reflexao', { title: 'Caminhar sem mapa', quote: 'Uma citação.' }).ok);
     assert.equal(validateTemplateParams('mago-reflexao', { quote: 'x'.repeat(241) }).ok, false);
+    assert.ok(validateTemplateParams('mago-erva', { hook: 'Por que arruda?', hookSec: 3.5 }).ok);
+    assert.equal(validateTemplateParams('mago-erva', { hookSec: 0.2 }).ok, false);
   });
 
   it('materializa sandbox com GSAP local e exige arquivos declarados', async () => {
