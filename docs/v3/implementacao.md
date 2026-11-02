@@ -51,6 +51,20 @@ Executado nesta entrega (Windows 11, Node 22.17, FFmpeg do winget, Postgres 17 e
 | render-worker e2e (1) | ok — mídia real → composição Hyperframes → render 16:9 e 9:16 → validação → entrega READY com sha256 |
 | web | `next build` ok; smoke HTTP: login, canais, projeto, upload por streaming, patch obsoleto → 409, render → 202, páginas `/hub/*` → 200, API anônima → 401 |
 
+## Central de mídias (`/hub/midias`)
+
+Cada canal tem mídias e agenda próprias. O canal **Mago da Meia-Noite** é criado automaticamente no workspace (novo ou existente) no primeiro acesso, sem vínculo com Rabisco ou Midnight; tom, regras e identidade visual são preenchidos em Canais.
+
+| Peça | Onde | Regra |
+|---|---|---|
+| Mídias do canal | `ChannelAsset`, `/api/v3/channels/:id/media` | Imagem, vídeo e áudio. O original continua único por hash no workspace; remover do canal não apaga o arquivo. Mídia em post aberto não pode ser removida |
+| Posts | `SocialPost` + `SocialPostMedia` + `SocialPostTarget`, `/api/v3/channels/:id/posts`, `/api/v3/social-posts/:id` | Rascunho aceita conteúdo incompleto; agendar confere as regras de cada rede (`packages/domain/src/social-posts.ts`). Editor cria e edita; só o proprietário agenda |
+| Postagem | Marcação manual por rede na agenda | Com o horário vencido o post aparece em "Hora de postar"; todas as redes marcadas = `POSTED`. Depois que uma rede é marcada, o conteúdo fica travado até desmarcar |
+
+Aplicar no banco real (depois do backup, §18.2): `npm run db:migrate:deploy` aplica `20261101000000_central_midias`, que é somente aditiva.
+
+Limitações: **nada é publicado automaticamente** e não há aviso fora do hub (o post vencido só aparece na agenda). Conectar Instagram/TikTok/Facebook/YouTube exige apps aprovados nas plataformas, o publish-worker do Marco 4 e aprovação vinculada ao conteúdo, como em `Publication`. A agenda do canal não mostra as `Publication` de vídeos renderizados, que seguem em Calendário.
+
 ## Não verificado / limitações conhecidas
 
 - **Agente com o modelo real não foi executado**: não há `ANTHROPIC_API_KEY` configurada e o uso tem custo. As ferramentas foram testadas sem o modelo. Primeiro passo ao configurar: `GET http://127.0.0.1:4100/health` e um comando simples no estúdio.

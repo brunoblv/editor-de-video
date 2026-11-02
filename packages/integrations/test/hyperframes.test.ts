@@ -19,6 +19,8 @@ describe('templates Hyperframes', () => {
     assert.equal(bad.ok, false);
     if (!bad.ok) assert.deepEqual(bad.issues.map((i) => i.id).sort(), ['inventado', 'lightLevel']);
     assert.equal(validateTemplateParams('rabisco-scene', { animation: 'explode' }).ok, false);
+    assert.ok(validateTemplateParams('arquetipo-ativacao', { name: 'A Feiticeira', gift1Title: 'Intuição' }).ok);
+    assert.equal(validateTemplateParams('arquetipo-ativacao', { name: 'x'.repeat(29) }).ok, false);
   });
 
   it('materializa sandbox com GSAP local e exige arquivos declarados', async () => {
@@ -31,6 +33,10 @@ describe('templates Hyperframes', () => {
     await assert.rejects(
       materializeComposition({ templateSlug: 'rabisco-scene', templateVersion: 1, params: {}, width: 1080, height: 1920, durationSec: 3, workDir: dir }),
       /exige o arquivo assets\/character\.png/,
+    );
+    await assert.rejects(
+      materializeComposition({ templateSlug: 'arquetipo-ativacao', templateVersion: 1, params: {}, width: 1080, height: 1920, durationSec: 20, workDir: dir }),
+      /exige o arquivo assets\/arquetipo\.png/,
     );
   });
 

@@ -6,6 +6,7 @@ import { useApi, useSelectedChannel } from './api';
 const ITEMS = [
   { href: '/hub', label: 'Visão geral' },
   { href: '/hub/canais', label: 'Canais' },
+  { href: '/hub/midias', label: 'Central de mídias' },
   { href: '/hub/projetos', label: 'Projetos' },
   { href: '/hub/biblioteca', label: 'Biblioteca' },
   { href: '/hub/calendario', label: 'Calendário' },

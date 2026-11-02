@@ -305,6 +305,65 @@ export function buildChannelSeeds(): ChannelSeed[] {
   return [midnight, christian, rabisco];
 }
 
+/**
+ * Canais criados a pedido do dono, fora do legado: ficam de fora do plano de
+ * migração. Tom, regras e identidade visual são preenchidos em Canais.
+ */
+export function buildAdditionalChannelSeeds(): ChannelSeed[] {
+  return [
+    {
+      slug: 'mago-da-meia-noite',
+      name: 'Mago da Meia-Noite',
+      nameConfirmed: true,
+      tagline: null,
+      languages: ['pt-BR'],
+      legacyKinds: [],
+      rules: channelRulesSchema.parse({}),
+      series: [
+        {
+          slug: 'arquetipos',
+          name: 'Arquétipos',
+          config: {
+            structure: ['NOITE: nome e epíteto', 'ATIVAÇÃO À MEIA-NOITE', 'TRÊS DÁDIVAS: o que pode trazer ao ativar', 'EM TROCA, PEDE'],
+            // "Pode trazer": a peça convida, não garante resultado.
+            guidance: 'Fale do que o arquétipo pode trazer, sem prometer resultado garantido.',
+            template: 'arquetipo-ativacao',
+            aspect: '9:16',
+            durationSec: 20,
+          },
+        },
+      ],
+      templates: [
+        {
+          slug: 'arquetipo-ativacao',
+          name: 'Arquétipo: ativação à meia-noite',
+          engine: 'hyperframes',
+          paramsSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', maxLength: 28 },
+              epithet: { type: 'string', maxLength: 60 },
+              gift1Title: { type: 'string', maxLength: 28 },
+              gift1Text: { type: 'string', maxLength: 90 },
+              gift2Title: { type: 'string', maxLength: 28 },
+              gift2Text: { type: 'string', maxLength: 90 },
+              gift3Title: { type: 'string', maxLength: 28 },
+              gift3Text: { type: 'string', maxLength: 90 },
+              asks: { type: 'string', maxLength: 90 },
+            },
+            required: ['name', 'gift1Title', 'gift2Title', 'gift3Title'],
+          },
+          defaults: {},
+        },
+      ],
+      brandKit: { colors: {}, fonts: [], logoAssetKey: null },
+      domain: {},
+      // §3: não presumir vínculo com Rabisco nem com Midnight.
+      linkedBrand: null,
+    },
+  ];
+}
+
 /** Formatos reutilizáveis entre canais (§3): não pertencem a um canal. */
 export const REUSABLE_FORMATS = [
   {

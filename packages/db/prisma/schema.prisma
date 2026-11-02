@@ -504,6 +504,13 @@ enum PublicationState {
   CANCELLED
 }
 
+enum SocialPostState {
+  DRAFT
+  SCHEDULED
+  POSTED
+  CANCELLED
+}
+
 enum AgentRunState {
   RUNNING
   SUCCEEDED
@@ -564,6 +571,8 @@ model Channel {
   characters  CharacterProfile[]
   recipes     Recipe[]
   verseUsages VerseUsage[]
+  media       ChannelAsset[]
+  posts       SocialPost[]
 
   @@unique([workspaceId, slug])
 }
@@ -694,6 +703,8 @@ model Asset {
 
   usages      AssetUsage[]
   transcripts TranscriptVersion[]
+  channels    ChannelAsset[]
+  postMedia   SocialPostMedia[]
 
   @@unique([workspaceId, sha256])
   @@index([workspaceId, kind])
@@ -992,6 +1003,66 @@ model PublicationAttempt {
   finishedAt          DateTime?
 
   @@unique([publicationId, number])
+}
+
+/// Central de mídias: arquivo disponível para um canal. O original continua
+/// único no workspace (hash), então o mesmo arquivo pode estar em vários canais.
+model ChannelAsset {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([channelId, assetId])
+  @@index([assetId])
+}
+
+/// Post programado na agenda do canal, com mídia livre (imagem ou vídeo).
+/// Publicação de entrega renderizada continua em Publication.
+model SocialPost {
+  id          String          @id @default(cuid())
+  channelId   String
+  channel     Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title       String?
+  caption     String          @default("")
+  notes       String?
+  state       SocialPostState @default(DRAFT)
+  scheduledAt DateTime?
+  postedAt    DateTime?
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  media   SocialPostMedia[]
+  targets SocialPostTarget[]
+
+  @@index([channelId, state, scheduledAt])
+}
+
+model SocialPostMedia {
+  id       String     @id @default(cuid())
+  postId   String
+  post     SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  assetId  String
+  asset    Asset      @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  position Int
+
+  @@unique([postId, assetId])
+  @@index([assetId])
+}
+
+/// Uma rede de destino do post; cada rede é marcada como postada separadamente.
+model SocialPostTarget {
+  id        String         @id @default(cuid())
+  postId    String
+  post      SocialPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform  SocialPlatform
+  postedAt  DateTime?
+  remoteUrl String?
+
+  @@unique([postId, platform])
 }
 
 /// Uso editorial de versículo por PEÇA (não por distribuição).

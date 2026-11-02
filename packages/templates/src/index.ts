@@ -37,6 +37,7 @@ export const TEMPLATES: TemplateDefinition[] = [
   { slug: 'midnight-title-card', version: 1, name: 'Cartão de título Midnight', channelSlug: 'midnight-relaxing-sounds', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 6 },
   { slug: 'christian-verse-card', version: 1, name: 'Versículo com referência', channelSlug: 'canal-cristao', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 8 },
   { slug: 'rabisco-scene', version: 1, name: 'Cena do Rabisco', channelSlug: 'rabisco', engine: 'hyperframes', requiredFiles: ['assets/character.png'], defaultDurationSec: 5 },
+  { slug: 'arquetipo-ativacao', version: 1, name: 'Arquétipo: ativação à meia-noite', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: ['assets/arquetipo.png'], defaultDurationSec: 20 },
 ];
 
 export function getTemplate(slug: string, version?: number): TemplateDefinition {

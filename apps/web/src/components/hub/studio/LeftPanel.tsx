@@ -193,6 +193,8 @@ function TranscriptTab({ studio, projectId }: { studio: StudioApi; projectId: st
   );
 }
 
+const NEEDS_ART = ['rabisco-scene', 'arquetipo-ativacao'];
+
 function TemplatesTab({ studio, channelId }: { studio: StudioApi; channelId: string }) {
   const { data } = useApi<{ channel: { templates: Template[] } }>(`/api/v3/channels/${channelId}`);
   const fps = timelineRate(studio.doc);
@@ -208,8 +210,8 @@ function TemplatesTab({ studio, channelId }: { studio: StudioApi; channelId: str
         <div key={t.id} className="card" style={{ padding: 8 }}>
           <div style={{ fontSize: 13 }}>{t.name}</div>
           <div className="stat">{t.slug}@{t.version} · {t.engine}</div>
-          {t.engine === 'hyperframes' && t.slug !== 'rabisco-scene' && <button disabled={studio.readOnly} onClick={() => insert(t)}>Inserir no cursor</button>}
-          {t.slug === 'rabisco-scene' && <div className="stat">Requer arte do personagem: peça ao Opus para montar a cena.</div>}
+          {t.engine === 'hyperframes' && !NEEDS_ART.includes(t.slug) && <button disabled={studio.readOnly} onClick={() => insert(t)}>Inserir no cursor</button>}
+          {NEEDS_ART.includes(t.slug) && <div className="stat">Requer arte do personagem: peça ao Opus para montar a cena.</div>}
         </div>
       ))}
     </div>

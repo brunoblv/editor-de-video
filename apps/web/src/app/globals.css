@@ -425,6 +425,34 @@ video.preview {
 .chat-msg[data-role='user'] { background: #23233a; align-self: flex-end; max-width: 90%; }
 .chat-msg .tools { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.media-tile { display: grid; gap: 6px; min-width: 0; padding: 6px; font: inherit; color: inherit; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; position: relative; }
+button.media-tile { cursor: pointer; }
+button.media-tile[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.media-thumb { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--surface-2); border-radius: 6px; color: var(--muted); font-size: 12px; }
+.media-tile .name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media-order { position: absolute; top: 10px; left: 10px; min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; }
+.agenda-head { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; font-size: 12px; color: var(--muted); text-align: center; }
+.agenda-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.agenda-day { display: flex; flex-direction: column; gap: 4px; min-height: 104px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.agenda-day[data-today='true'] { border-color: var(--accent); }
+.agenda-day[data-past='true'] { opacity: 0.65; }
+.agenda-day .top { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.agenda-day .add { padding: 0 7px; line-height: 20px; font-size: 14px; }
+.agenda-weekday { display: none; }
+.agenda-post { display: block; width: 100%; padding: 4px 6px; font: inherit; font-size: 12px; color: var(--text); text-align: left; cursor: pointer; background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--warn); border-radius: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agenda-post[data-state='POSTED'] { border-left-color: var(--ok); }
+.agenda-post[data-due='true'] { border-left-color: var(--accent); }
+.post-dialog { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 20px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.post-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.post-dialog .stack { display: grid; gap: 12px; }
+.post-dialog input[type='datetime-local'], .post-dialog input[type='url'] { padding: 8px 10px; font: inherit; color: var(--text); color-scheme: dark; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
+.media-tile a, .post-dialog a { color: var(--text); text-decoration: underline; font-size: 13px; }
+.platform-checks { display: flex; flex-wrap: wrap; gap: 12px; }
+.platform-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.target-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.target-row input[type='url'] { flex: 1 1 200px; min-width: 0; }
+
 @media (max-width: 1100px) {
   .studio-body { grid-template-columns: minmax(0, 1fr); }
   .studio-body > .left, .studio-body > .right { display: none; }
@@ -436,4 +464,9 @@ video.preview {
   .hub-nav { position: static; flex-direction: row; overflow-x: auto; }
   .hub-nav a { white-space: nowrap; }
   .studio { height: auto; }
+  .agenda-head { display: none; }
+  .agenda-weekday { display: inline; }
+  .agenda-grid { grid-template-columns: minmax(0, 1fr); }
+  .agenda-day { min-height: 0; }
+  .agenda-day[data-blank='true'] { display: none; }
 }

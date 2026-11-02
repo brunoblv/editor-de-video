@@ -27,12 +27,12 @@ describe('serviços V3 sobre Postgres', { skip }, () => {
     }
   });
 
-  it('cria workspace com os três canais preservados', async () => {
+  it('cria workspace com os três canais preservados e os canais adicionais', async () => {
     const ws = await v3.ensureWorkspaceForUser(userA, 'A');
     const again = await v3.ensureWorkspaceForUser(userA, 'A');
     assert.equal(ws, again);
     const channels = await v3.listChannels({ userId: userA });
-    assert.deepEqual(channels.map((c) => c.slug).sort(), ['canal-cristao', 'midnight-relaxing-sounds', 'rabisco']);
+    assert.deepEqual(channels.map((c) => c.slug).sort(), ['canal-cristao', 'mago-da-meia-noite', 'midnight-relaxing-sounds', 'rabisco']);
   });
 
   it('AC-06/AC-08: patch concorrente é rejeitado; restaurar preserva histórico', async () => {

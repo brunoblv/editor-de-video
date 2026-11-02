@@ -18,10 +18,13 @@ export const PUBLICATION_STATES = [
   'CANCELLED',
 ] as const;
 
+export const SOCIAL_POST_STATES = ['DRAFT', 'SCHEDULED', 'POSTED', 'CANCELLED'] as const;
+
 export type ProjectState = (typeof PROJECT_STATES)[number];
 export type JobState = (typeof JOB_STATES)[number];
 export type DeliverableState = (typeof DELIVERABLE_STATES)[number];
 export type PublicationState = (typeof PUBLICATION_STATES)[number];
+export type SocialPostState = (typeof SOCIAL_POST_STATES)[number];
 
 type Transitions<S extends string> = Record<S, readonly S[]>;
 
@@ -64,6 +67,14 @@ export const PUBLICATION_TRANSITIONS: Transitions<PublicationState> = {
   FAILED: ['DRAFT', 'APPROVED', 'CANCELLED'],
   // Resultado incerto: só sai daqui por reconciliação com o estado remoto.
   UNKNOWN: ['PUBLISHED', 'PROCESSING_REMOTE', 'FAILED'],
+  CANCELLED: [],
+};
+
+export const SOCIAL_POST_TRANSITIONS: Transitions<SocialPostState> = {
+  DRAFT: ['SCHEDULED', 'CANCELLED'],
+  SCHEDULED: ['DRAFT', 'POSTED', 'CANCELLED'],
+  // Desmarcar uma rede postada por engano volta para a agenda.
+  POSTED: ['SCHEDULED'],
   CANCELLED: [],
 };
 

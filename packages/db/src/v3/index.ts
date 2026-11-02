@@ -9,5 +9,6 @@ export * from './projects.js';
 export * from './assets.js';
 export * from './jobs.js';
 export * from './review.js';
+export * from './social-posts.js';
 export * from './agent-runs.js';
 export { loadLegacySnapshot, findMissingFiles, runMigration } from './migrate-legacy.js';

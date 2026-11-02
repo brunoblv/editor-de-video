@@ -10,5 +10,6 @@ export * from './publication.js';
 export * from './cache.js';
 export * from './access.js';
 export * from './channels.js';
+export * from './social-posts.js';
 export * from './migration.js';
 export * from './agent-contracts.js';

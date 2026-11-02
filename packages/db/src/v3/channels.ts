@@ -3,7 +3,7 @@
  * de @editor-video/domain; editar um canal nunca toca outro canal nem
  * projetos existentes (revisões fixam identidade/template por versão).
  */
-import { buildChannelSeeds, channelRulesSchema, DomainError, type ChannelSeed } from '@editor-video/domain';
+import { buildAdditionalChannelSeeds, buildChannelSeeds, channelRulesSchema, DomainError, type ChannelSeed } from '@editor-video/domain';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../client.js';
 import { requireRole, type Actor } from './access.js';
@@ -13,12 +13,30 @@ const json = (v: unknown) => v as Prisma.InputJsonValue;
 /** Garante um workspace pessoal para o usuário (primeiro acesso à V3). */
 export async function ensureWorkspaceForUser(userId: string, name: string): Promise<string> {
   const existing = await prisma.membership.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } });
-  if (existing) return existing.workspaceId;
+  if (existing) {
+    await ensureAdditionalChannels(existing.workspaceId);
+    return existing.workspaceId;
+  }
   const workspace = await prisma.workspace.create({
     data: { name, memberships: { create: { userId, role: 'OWNER' } } },
   });
   await seedChannels(workspace.id);
+  await ensureAdditionalChannels(workspace.id);
   return workspace.id;
+}
+
+const workspacesWithAdditionalChannels = new Set<string>();
+
+/** Workspaces já existentes também recebem os canais adicionados depois (uma vez por processo). */
+async function ensureAdditionalChannels(workspaceId: string) {
+  if (workspacesWithAdditionalChannels.has(workspaceId)) return;
+  try {
+    for (const seed of buildAdditionalChannelSeeds()) await upsertChannelSeed(workspaceId, seed);
+    workspacesWithAdditionalChannels.add(workspaceId);
+  } catch (err) {
+    // Requisições simultâneas no primeiro acesso: a outra criou o canal.
+    if ((err as { code?: string }).code !== 'P2002') throw err;
+  }
 }
 
 /** Upsert idempotente de um canal-semente com brand kit v1, séries e templates v1. */
@@ -92,7 +110,7 @@ export async function listChannels(actor: Actor, workspaceId?: string) {
     include: {
       series: { where: { active: true }, orderBy: { name: 'asc' } },
       accounts: { select: { id: true, platform: true, displayName: true, status: true, isTestAccount: true } },
-      _count: { select: { projects: true } },
+      _count: { select: { projects: true, media: true, posts: true } },
     },
   });
 }
