@@ -3,8 +3,8 @@
 **Status:** backlog executável, ainda não implementado.  
 **Repositório:** brunoblv/editor-de-video  
 **Data:** 2026-11-03  
-**Documento funcional principal:** \`docs/reactive-lyrics-studio-requisitos.md\`  
-**Fonte arquitetural prioritária:** \`CLAUDE.md\`, \`docs/especificacao-v3-hub-editor-ia.md\`, \`docs/v3/implementacao.md\`.
+**Documento funcional principal:** `docs/reactive-lyrics-studio-requisitos.md`  
+**Fonte arquitetural prioritária:** `CLAUDE.md`, `docs/especificacao-v3-hub-editor-ia.md`, `docs/v3/implementacao.md`.
 
 ## 0. Missão do Claude Code
 
@@ -23,13 +23,13 @@ Não entregar apenas documentação, stubs, mockups ou simulação. Construir in
 ## 1. Leitura obrigatória antes de mudar código
 
 Inspecionar código e documentação, nesta ordem:
-1. \`CLAUDE.md\` — regras de segurança, migrações, subprocessos e patches de timeline.
-2. \`docs/v3/implementacao.md\` — estado real, limitações e comandos.
-3. \`docs/especificacao-v3-hub-editor-ia.md\` — conceitos de hub/canais/revisões/entregas.
-4. \`docs/reactive-lyrics-studio-requisitos.md\` — 70 RFs, 16 RNFs, casos de aceite, dados e riscos.
-5. \`packages/timeline\`, \`packages/domain\`, \`packages/db\`, \`packages/templates\`, \`packages/integrations\`, \`apps/render-worker\`, \`apps/agent\`, \`apps/web\`.
+1. `CLAUDE.md` — regras de segurança, migrações, subprocessos e patches de timeline.
+2. `docs/v3/implementacao.md` — estado real, limitações e comandos.
+3. `docs/especificacao-v3-hub-editor-ia.md` — conceitos de hub/canais/revisões/entregas.
+4. `docs/reactive-lyrics-studio-requisitos.md` — 70 RFs, 16 RNFs, casos de aceite, dados e riscos.
+5. `packages/timeline`, `packages/domain`, `packages/db`, `packages/templates`, `packages/integrations`, `apps/render-worker`, `apps/agent`, `apps/web`.
 
-Antes de codificar, gerar em \`docs/reactive-lyrics-studio-plano.md\`:
+Antes de codificar, gerar em `docs/reactive-lyrics-studio-plano.md`:
 - inventário dos arquivos/classes/rotas reutilizáveis;
 - gaps por requisito P0;
 - escolhas tecnológicas verificadas por POC;
@@ -37,15 +37,15 @@ Antes de codificar, gerar em \`docs/reactive-lyrics-studio-plano.md\`:
 - plano de implementação em etapas com teste de saída por etapa;
 - riscos e dependências de ambiente e hardware.
 
-**Não inferir a estrutura apenas pelo README.** A V3 coexiste com o legado. Distinguir \`ProjectKind\` legado de \`VideoProject\`/tipos canônicos V3 antes de criar tipo \`LYRICS\`.
+**Não inferir a estrutura apenas pelo README.** A V3 coexiste com o legado. Distinguir `ProjectKind` legado de `VideoProject`/tipos canônicos V3 antes de criar tipo `LYRICS`.
 
 ## 2. Restrições arquiteturais inegociáveis
 
-- A **timeline V3 é a fonte oficial de edição**. Só alterá-la através de operações/patches de \`packages/timeline\` com \`expectedRevisionId\` e \`commitPatch\`, conforme \`CLAUDE.md\`. Não gravar \`documentJson\` diretamente. Usar histórico de revisão e isolamento por workspace.
+- A **timeline V3 é a fonte oficial de edição**. Só alterá-la através de operações/patches de `packages/timeline` com `expectedRevisionId` e `commitPatch`, conforme `CLAUDE.md`. Não gravar `documentJson` diretamente. Usar histórico de revisão e isolamento por workspace.
 - Reutilizar estados, leases/heartbeat, cache, fila, autorização, entregas e revisão que já existam, sem construir um pipeline paralelo desnecessário.
-- **Banco:** apenas migrations Prisma aditivas em \`packages/db/prisma/migrations\`; jamais \`db push\`, reset, wipe ou migration destrutiva no banco real. Testes SQL somente em banco descartável via \`V3_TEST_DATABASE_URL\`. Fazer backup antes de migração em ambiente real.
-- **Subprocessos:** executar somente com o runner estruturado \`runProcess\`; argumentos tipados, sem shell injection e sem concatenar comandos fornecidos pelo usuário.
-- **Render:** usar adaptador existente Hyperframes e avaliar ampliação; o repositório registra Hyperframes \`0.8.190\` e GSAP \`3.14.2\` fixados — conferir no package-lock antes de atualizar dependência. Não trocar a stack em massa.
+- **Banco:** apenas migrations Prisma aditivas em `packages/db/prisma/migrations`; jamais `db push`, reset, wipe ou migration destrutiva no banco real. Testes SQL somente em banco descartável via `V3_TEST_DATABASE_URL`. Fazer backup antes de migração em ambiente real.
+- **Subprocessos:** executar somente com o runner estruturado `runProcess`; argumentos tipados, sem shell injection e sem concatenar comandos fornecidos pelo usuário.
+- **Render:** usar adaptador existente Hyperframes e avaliar ampliação; o repositório registra Hyperframes `0.8.190` e GSAP `3.14.2` fixados — conferir no package-lock antes de atualizar dependência. Não trocar a stack em massa.
 - O renderizador de Hyperframes atual trata composições como mídia opaca e o preview do estúdio não é totalmente em tempo real. A solução inicial pode usar preview segmentado/renderizado. NÃO prometer sobreposição com alpha ou realtime sem validação.
 - O contrato atual de timeline trabalha em **frames inteiros** e sourceTimebase racional. Se análise/alinhamento usarem milissegundos, criar conversores explícitos com arredondamento testado e sem drift. Nunca introduzir segundos float como tempo canônico da timeline.
 - O plano artístico pode configurar efeitos, mas não pode sobrescrever letra/timestamps aprovados, destravar objetos ou executar código arbitrário.
@@ -68,18 +68,18 @@ Antes de codificar, gerar em \`docs/reactive-lyrics-studio-plano.md\`:
 8. gera entrega revisável/baixável, sem publicar;
 9. mantém o trabalho após fechar e reabrir o projeto.
 
-**Não considerar automático aquilo que depende de revisão humana**: áudio cantado exige letra correta; se não houver confiança suficiente, indicar \`UNALIGNED\` e oferecer ajuste.
+**Não considerar automático aquilo que depende de revisão humana**: áudio cantado exige letra correta; se não houver confiança suficiente, indicar `UNALIGNED` e oferecer ajuste.
 
 ## 4. Backlog implementável por incrementos
 
 ### Etapa 0 — Prova técnica e riscos (obrigatória)
 
 - Criar POC isolada e testável com 10–15 s de áudio permitido, letra fornecida e mapa artificial/real.
-- Verificar que \`@hyperframes/producer\` consegue renderizar texto/movimentos do GSAP por tempo determinado e produzir MP4 válido no ambiente do worker.
+- Verificar que `@hyperframes/producer` consegue renderizar texto/movimentos do GSAP por tempo determinado e produzir MP4 válido no ambiente do worker.
 - Aplicar dois sinais reativos distintos: pulso por grave/RMS e flash moderado ou brilho por onset/agudos; saída deve depender do mapa e reproduzir-se após seek.
 - Comprovar que áudio importado é muxado com duração correta, não com alteração de velocidade.
 - Documentar benchmarks aproximados, versão de renderer, limitações de alpha, consumo de RAM e diferenças entre preview/final.
-- Só depois decidir o adapter concreto e registrar evidências em \`docs/reactive-lyrics-studio-plano.md\`.
+- Só depois decidir o adapter concreto e registrar evidências em `docs/reactive-lyrics-studio-plano.md`.
 
 **Gate 0:** um vídeo de POC verificável e teste que demonstra alteração de efeito quando o MusicalMap muda. Se falhar Hyperframes, propor adapter compatível já previsto no hub em vez de declarar o recurso impossível.
 
@@ -89,9 +89,9 @@ Implementar:
 - extensão V3 para projeto com formato Reactive Lyrics, mantendo canais genéricos;
 - cadastro de áudio MP3/WAV/FLAC, metadados e hash do arquivo, com proteção de upload;
 - letras em TXT/LRC/SRT/VTT; edição de Unicode/idiomas; não sobrescrever texto validado;
-- pipeline offline \`ffprobe/FFmpeg + librosa\` ou equivalente para waveform, envelope RMS, beats, onset e espectro em bandas bass/mid/treble;
-- \`MusicalMap v1\`, schema Zod, versionamento e cache por SHA256 da fonte + versão do analisador;
-- importação/alinhamento \`LyricAlignment v1\`: linhas, palavras, início/fim, estado/confiança, repetição de frases; ajustes manuais;
+- pipeline offline `ffprobe/FFmpeg + librosa` ou equivalente para waveform, envelope RMS, beats, onset e espectro em bandas bass/mid/treble;
+- `MusicalMap v1`, schema Zod, versionamento e cache por SHA256 da fonte + versão do analisador;
+- importação/alinhamento `LyricAlignment v1`: linhas, palavras, início/fim, estado/confiança, repetição de frases; ajustes manuais;
 - adapter opcional Whisper/faster-whisper e alinhador por palavra (ex.: WhisperX), configurável e com erro legível na ausência de binários/modelos;
 - separação opcional de stems SOMENTE se demonstrado ganho real e custo aceitável; não bloquear MVP.
 
@@ -100,21 +100,21 @@ Implementar:
 ### Etapa 2 — Timeline e UI
 
 Implementar páginas/componentes integrados ao hub:
-- \`Novo projeto > Reactive Lyrics\` com áudio, letra, idioma, direitos e resolução;
+- `Novo projeto > Reactive Lyrics` com áudio, letra, idioma, direitos e resolução;
 - visualizador de waveform e marcadores musicais;
-- painel de letra com linha/palavra ativa e \`UNALIGNED\`, arraste de início/fim, offset global, edição e validação;
+- painel de letra com linha/palavra ativa e `UNALIGNED`, arraste de início/fim, offset global, edição e validação;
 - controles de reprodução, seek, loop de trecho e zoom de timeline;
 - propriedades visuais: cor, fonte, destaque karaoke, posição, brilho, reatividade, suavização, intensidade 0–100 e modo movimento reduzido;
 - safe zones para 9:16 e 16:9;
 - ações de revisão/undo/redo aproveitando revisões V3.
 
-**Gate 2:** editar o tempo da palavra e confirmar que a alteração aparece em revisão persistida sem modificar o áudio; testes de permissões e conflitos 409 com \`expectedRevisionId\`.
+**Gate 2:** editar o tempo da palavra e confirmar que a alteração aparece em revisão persistida sem modificar o áudio; testes de permissões e conflitos 409 com `expectedRevisionId`.
 
 ### Etapa 3 — Composição e render final
 
 Implementar e testar:
-- três templates \`NEON_CINEMATIC\`, \`MINIMAL_LYRICS\`, \`GLITCH_ROCK\`;
-- bindings declarativos \`bass->scale\`, \`treble->glow\`, \`rms->opacity\`, \`onset->particle/glitch\` com ganho, clamp, suavização e cooldown;
+- três templates `NEON_CINEMATIC`, `MINIMAL_LYRICS`, `GLITCH_ROCK`;
+- bindings declarativos `bass->scale`, `treble->glow`, `rms->opacity`, `onset->particle/glitch` com ganho, clamp, suavização e cooldown;
 - transições de letra por palavra e por linha (entrada, destaque, saída);
 - escala, cor, opacidade e brilho sempre com limites para legibilidade; presets sem flashes perigosos por padrão;
 - pipeline determinístico, sem depender da reprodução de áudio em tempo real, relógio de parede ou aleatoriedade sem seed;
@@ -127,7 +127,7 @@ Implementar e testar:
 
 ### Etapa 4 — Claude Opus como diretor artístico (P1, após gates P0)
 
-- Usar \`apps/agent\` e ferramentas já autorizadas para receber mapa, seções, letra validada e preferências.
+- Usar `apps/agent` e ferramentas já autorizadas para receber mapa, seções, letra validada e preferências.
 - Criar ArtisticPlan versionado com JSON/Zod; limitar escolhas a templates, camadas, faixas de intensidade e efeitos suportados.
 - Propor alterações por patch V3, respeitar locks, permissões e histórico.
 - Sugerir paleta/estilo por verso/pré-refrão/refrão/ponte; permitir aceitar/rejeitar.
@@ -144,11 +144,11 @@ Campos necessários: schemaVersion, analysisVersion, audioSha256, durationUnits 
 
 ### LyricAlignment
 
-Campos: schemaVersion, idioma, linhas, palavras, start/end, confidence opcional, source \`manual/forced_alignment/asr\`, status \`UNALIGNED/SUGGESTED/VALIDATED\`, offsets/revisão. Uma palavra fora do intervalo de sua linha ou com tempo invertido é inválida.
+Campos: schemaVersion, idioma, linhas, palavras, start/end, confidence opcional, source `manual/forced_alignment/asr`, status `UNALIGNED/SUGGESTED/VALIDATED`, offsets/revisão. Uma palavra fora do intervalo de sua linha ou com tempo invertido é inválida.
 
 ### ReactiveEffectBinding
 
-\`source\` ∈ {bass, mids, treble, rms, onset, beat}; \`target\` ∈ {scale, glow, opacity, translate, particles, glitch}; \`gain\`, \`threshold\`, \`smoothingMs\`, \`cooldownMs\`, \`clampMin\`, \`clampMax\`, \`enabled\`. Os valores de efeito devem ser computados no instante/frame solicitado, com seed quando aplicável.
+`source` ∈ {bass, mids, treble, rms, onset, beat}; `target` ∈ {scale, glow, opacity, translate, particles, glitch}; `gain`, `threshold`, `smoothingMs`, `cooldownMs`, `clampMin`, `clampMax`, `enabled`. Os valores de efeito devem ser computados no instante/frame solicitado, com seed quando aplicável.
 
 ### RenderManifest
 
@@ -172,7 +172,7 @@ Projeto, revisão V3, hashes dos arquivos, versões da análise/adapter/template
 - unitários: cálculo de eventos, suavização, clamp, alinhamento, conversão ms/frames, parser TXT/LRC/SRT/VTT, schemas;
 - integração: adapter de análise, Hyperframes real, FFmpeg, storage, patch/revisão, banco descartável;
 - e2e: upload → análise → alinhamento/edição → preview → MP4 9:16/16:9 → entrega → reabertura;
-- regressão: \`npm run build:packages\`, \`npm run test:v3\`, \`npm run typecheck\` e suíte do render-worker; documentar testes que não rodarem e o motivo.
+- regressão: `npm run build:packages`, `npm run test:v3`, `npm run typecheck` e suíte do render-worker; documentar testes que não rodarem e o motivo.
 
 Manter assets sintéticos/originais curtos para fixtures, evitando commits de músicas protegidas.
 
