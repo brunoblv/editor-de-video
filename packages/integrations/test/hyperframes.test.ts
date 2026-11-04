@@ -25,6 +25,8 @@ describe('templates Hyperframes', () => {
     assert.equal(validateTemplateParams('mago-reflexao', { quote: 'x'.repeat(241) }).ok, false);
     assert.ok(validateTemplateParams('mago-erva', { hook: 'Por que arruda?', hookSec: 3.5 }).ok);
     assert.equal(validateTemplateParams('mago-erva', { hookSec: 0.2 }).ok, false);
+    assert.ok(validateTemplateParams('reactive-lyrics', { preset: 'glitch_rock', intensity: 0, reducedMotion: true }).ok);
+    assert.equal(validateTemplateParams('reactive-lyrics', { preset: 'strobe', intensity: 101 }).ok, false);
   });
 
   it('materializa sandbox com GSAP local e exige arquivos declarados', async () => {
@@ -37,6 +39,10 @@ describe('templates Hyperframes', () => {
     await assert.rejects(
       materializeComposition({ templateSlug: 'rabisco-scene', templateVersion: 1, params: {}, width: 1080, height: 1920, durationSec: 3, workDir: dir }),
       /exige o arquivo assets\/character\.png/,
+    );
+    await assert.rejects(
+      materializeComposition({ templateSlug: 'reactive-lyrics', templateVersion: 1, params: {}, width: 1080, height: 1920, durationSec: 3, workDir: dir }),
+      /exige o arquivo assets\/lyrics-data\.js/,
     );
     await assert.rejects(
       materializeComposition({ templateSlug: 'arquetipo-ativacao', templateVersion: 1, params: {}, width: 1080, height: 1920, durationSec: 20, workDir: dir }),

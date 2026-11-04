@@ -1,0 +1,376 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"preset","type":"enum","label":"Preset","default":"neon","options":[{"value":"neon","label":"Neon Cinematic"},{"value":"minimal","label":"Minimal Lyrics"},{"value":"glitch_rock","label":"Glitch Rock"}]},
+    {"id":"highlightMode","type":"enum","label":"Destaque","default":"karaoke","options":[{"value":"karaoke","label":"Palavra a palavra"},{"value":"line","label":"Linha"}]},
+    {"id":"intensity","type":"number","label":"Intensidade","default":70,"min":0,"max":100,"step":1},
+    {"id":"reducedMotion","type":"boolean","label":"Movimento reduzido","default":false},
+    {"id":"limitFlashes","type":"boolean","label":"Limitar flashes (máx. 3/s)","default":true},
+    {"id":"fontScale","type":"number","label":"Tamanho da letra","default":1,"min":0.6,"max":1.6,"step":0.05},
+    {"id":"textPosition","type":"enum","label":"Posição","default":"center","options":[{"value":"upper","label":"Alto"},{"value":"center","label":"Centro"},{"value":"lower","label":"Baixo"}]},
+    {"id":"accent","type":"color","label":"Destaque","default":"#7C5CFF"},
+    {"id":"background","type":"color","label":"Fundo","default":"#05040E"},
+    {"id":"textColor","type":"color","label":"Texto","default":"#F2F0FF"},
+    {"id":"credit","type":"string","label":"Crédito (artista — faixa)","default":"","maxLength":80}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Reactive Lyrics</title>
+    <script src="vendor/gsap.min.js"></script>
+    <script src="assets/lyrics-data.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--background); }
+      .clip { position: absolute; inset: 0; }
+      #bg { position: absolute; inset: -10%; }
+      #fx { position: absolute; inset: 0; pointer-events: none; }
+      #box { position: absolute; display: flex; justify-content: center; }
+      #stage { position: relative; width: 100%; height: 100%; transform-origin: 50% 50%; }
+      .line { position: absolute; left: 0; right: 0; margin: 0; text-align: center; visibility: hidden; color: var(--textColor); line-height: 1.18; overflow-wrap: break-word; white-space: pre-line; }
+      .w { display: inline-block; white-space: pre; }
+      .particle { position: absolute; width: 1.1vmin; height: 1.1vmin; margin: -0.55vmin; border-radius: 50%; opacity: 0; }
+      .bar { position: absolute; left: 0; right: 0; opacity: 0; mix-blend-mode: screen; }
+      #credit { position: absolute; margin: 0; font-size: 2.1vmin; letter-spacing: 0.06em; opacity: 0.75; color: var(--textColor); font-family: Inter, sans-serif; }
+      #progress { position: absolute; height: 0.35vmin; background: var(--accent); transform-origin: 0 50%; opacity: 0; }
+
+      /* Neon Cinematic */
+      .p-neon .line { font-family: Montserrat, sans-serif; font-weight: 700; text-shadow: 0 0 calc(var(--glow, 0) * 1vmin) var(--accent), 0 0 calc(var(--glow, 0) * 2.4vmin) var(--accent); }
+      .p-neon.karaoke .w { opacity: 0.42; }
+      .p-neon .w[data-s='active'] { opacity: 1; color: #FFFFFF; text-shadow: 0 0 1.2vmin var(--accent), 0 0 calc(1.5vmin + var(--glow, 0) * 3vmin) var(--accent); }
+      .p-neon .w[data-s='sung'] { opacity: 1; }
+      .p-neon #bg { background: radial-gradient(ellipse at 30% 35%, rgba(59,130,246,0.55), transparent 55%), radial-gradient(ellipse at 72% 70%, color-mix(in srgb, var(--accent) 70%, transparent), transparent 58%); }
+      .p-neon .particle { background: #FFFFFF; box-shadow: 0 0 1.4vmin 0.4vmin var(--accent); }
+
+      /* Minimal Lyrics */
+      .p-minimal .line { font-family: Inter, sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+      .p-minimal.karaoke .w { opacity: 0.32; }
+      .p-minimal .w[data-s='active'] { opacity: 1; color: var(--accent); }
+      .p-minimal .w[data-s='sung'] { opacity: 1; }
+      .p-minimal #bg { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 14%, transparent)); }
+      .p-minimal #progress { opacity: 0.8; }
+
+      /* Glitch Rock */
+      .p-glitch_rock .line { font-family: 'League Gothic', Oswald, sans-serif; font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em; text-shadow: calc(var(--split, 0) * 1vmin) 0 #FF2A55, calc(var(--split, 0) * -1vmin) 0 #05D9E8; }
+      .p-glitch_rock.karaoke .w { opacity: 0.5; }
+      .p-glitch_rock .w[data-s='active'] { opacity: 1; color: var(--accent); }
+      .p-glitch_rock .w[data-s='sung'] { opacity: 1; }
+      .p-glitch_rock #bg { background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 5px), radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 65%); }
+      .p-glitch_rock .bar { background: linear-gradient(90deg, transparent, rgba(5,217,232,0.55), rgba(255,42,85,0.55), transparent); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="scene" class="clip" data-start="0" data-duration="__DURATION__">
+        <div id="bg"></div>
+        <div id="fx"></div>
+        <div id="box"><div id="stage"></div></div>
+        <div id="progress"></div>
+        <p id="credit" data-var-text="credit"></p>
+      </section>
+    </div>
+    <script>
+      const vars = window.__hyperframes.getVariables();
+      const data = window.__LYRICS__;
+      const root = document.getElementById('root');
+      const W = Number(root.dataset.width);
+      const H = Number(root.dataset.height);
+      const duration = Number(root.dataset.duration);
+      const vmin = Math.min(W, H) / 100;
+      const preset = vars.preset;
+      const reduced = vars.reducedMotion;
+      const karaoke = vars.highlightMode === 'karaoke';
+      const k = Math.max(0, Math.min(100, vars.intensity)) / 100;
+      // Intervalo mínimo entre efeitos de impacto: 3 por segundo com limite de flashes (WCAG 2.3.1).
+      const minEventGapMs = vars.limitFlashes ? 334 : 120;
+      root.classList.add(`p-${preset}`);
+      if (karaoke) root.classList.add('karaoke');
+
+      // PRNG com semente: nada de Math.random() no render (determinismo).
+      function rng(seed) {
+        let s = seed >>> 0;
+        return () => {
+          s = (s + 0x6d2b79f5) >>> 0;
+          let t = s;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      // Áreas seguras: no vertical, evita a interface das redes (topo, legenda e coluna direita).
+      const portrait = H > W;
+      const safe = portrait ? { top: 0.15, bottom: 0.25, left: 0.08, right: 0.14 } : { top: 0.08, bottom: 0.14, left: 0.07, right: 0.07 };
+      const box = document.getElementById('box');
+      Object.assign(box.style, {
+        left: `${safe.left * W}px`,
+        top: `${safe.top * H}px`,
+        width: `${(1 - safe.left - safe.right) * W}px`,
+        height: `${(1 - safe.top - safe.bottom) * H}px`,
+      });
+      const boxW = (1 - safe.left - safe.right) * W;
+      const boxH = (1 - safe.top - safe.bottom) * H;
+      const credit = document.getElementById('credit');
+      Object.assign(credit.style, { left: `${safe.left * W}px`, bottom: `${(safe.bottom - 0.05) * H}px` });
+      const progress = document.getElementById('progress');
+      Object.assign(progress.style, { left: `${safe.left * W}px`, width: `${boxW}px`, bottom: `${(safe.bottom - 0.02) * H}px` });
+
+      // ---------------------------------------------------------------- letra
+      const stage = document.getElementById('stage');
+      const baseFont = (portrait ? 6.4 : 7.2) * vmin * vars.fontScale * (preset === 'glitch_rock' ? 1.35 : 1);
+      const anchor = { upper: 0.22, center: 0.5, lower: 0.78 }[vars.textPosition];
+      const holdMs = 300;
+      const lines = data.lines.map((line, index) => {
+        const el = document.createElement('p');
+        el.className = 'line';
+        const spans = [];
+        // Separadores preservam a quebra de linha das legendas de duas linhas.
+        const parts = line.words ? line.words.flatMap((w, i) => (i ? [' ', w.text] : [w.text])) : line.text.trim().split(/(\s+)/);
+        parts.forEach((text, i) => {
+          if (i % 2 === 1) {
+            el.appendChild(document.createTextNode(text.includes('\n') ? '\n' : ' '));
+            return;
+          }
+          const span = document.createElement('span');
+          span.className = 'w';
+          span.textContent = text;
+          el.appendChild(span);
+          spans.push(span);
+        });
+        stage.appendChild(el);
+        return { ...line, index, el, spans };
+      });
+
+      // Linhas sobrepostas (canto sobreposto) vão para a segunda faixa, abaixo.
+      const slotEnd = [-Infinity, -Infinity];
+      lines.forEach((line) => {
+        // Só o canto de fato sobreposto conta; a permanência na tela (holdMs) não.
+        line.slot = line.startMs < slotEnd[0] ? 1 : 0;
+        slotEnd[line.slot] = Math.max(slotEnd[line.slot], line.endMs);
+      });
+
+      // Ajuste de tamanho: a letra nunca ultrapassa a área segura (RF-035).
+      // A linha quebra em até 3 linhas; encolhe se passar disso ou se uma palavra não couber na largura.
+      lines.forEach((line) => {
+        let size = baseFont * (line.slot === 1 ? 0.78 : 1);
+        const tooBig = () => {
+          const widest = Math.max(...line.spans.map((s) => s.offsetWidth));
+          return widest > boxW * 0.98 || line.el.offsetHeight > Math.min(boxH * (line.slot === 1 ? 0.3 : 0.46), size * 1.18 * 3.2);
+        };
+        line.el.style.fontSize = `${size}px`;
+        for (let i = 0; i < 30 && tooBig(); i += 1) {
+          size *= 0.93;
+          line.el.style.fontSize = `${size}px`;
+        }
+        const center = line.slot === 1 ? Math.min(0.9, anchor + 0.3) : anchor;
+        line.el.style.top = `${Math.max(0, Math.min(boxH - line.el.offsetHeight, center * boxH - line.el.offsetHeight / 2))}px`;
+      });
+
+      const tl = gsap.timeline({ paused: true });
+      const entry = reduced ? 0.25 : { neon: 0.35, minimal: 0.3, glitch_rock: 0.16 }[preset];
+      const exit = reduced ? 0.2 : { neon: 0.3, minimal: 0.25, glitch_rock: 0.12 }[preset];
+      const byslot = [lines.filter((l) => l.slot === 0), lines.filter((l) => l.slot === 1)];
+      byslot.forEach((slotLines) => {
+        slotLines.forEach((line, i) => {
+          const prev = slotLines[i - 1];
+          const next = slotLines[i + 1];
+          const start = line.startMs / 1000;
+          const prevEnd = prev ? prev.visibleEnd : 0;
+          const inAt = Math.max(0, prevEnd, start - entry);
+          const inDur = Math.max(0.05, Math.min(entry, start + entry - inAt));
+          let visibleEnd = (line.endMs + holdMs) / 1000;
+          if (next) visibleEnd = Math.min(visibleEnd, Math.max(line.endMs / 1000, next.startMs / 1000 - entry * 0.5));
+          visibleEnd = Math.min(visibleEnd, duration);
+          line.visibleEnd = visibleEnd;
+          const outDur = Math.max(0.05, Math.min(exit, visibleEnd - inAt - inDur));
+          const from = reduced
+            ? { autoAlpha: 0 }
+            : preset === 'neon'
+              ? { autoAlpha: 0, scale: 0.94, filter: 'blur(8px)' }
+              : preset === 'minimal'
+                ? { autoAlpha: 0, y: 3 * vmin }
+                : { autoAlpha: 0, x: (line.index % 2 ? 1 : -1) * 2.5 * vmin, skewX: -8 };
+          const to = { autoAlpha: 1, scale: 1, y: 0, x: 0, skewX: 0, filter: 'blur(0px)', duration: inDur, ease: preset === 'glitch_rock' ? 'steps(3)' : 'power2.out' };
+          tl.fromTo(line.el, from, to, inAt);
+          const away = reduced ? { autoAlpha: 0 } : preset === 'neon' ? { autoAlpha: 0, filter: 'blur(6px)' } : preset === 'minimal' ? { autoAlpha: 0, y: -2 * vmin } : { autoAlpha: 0, x: 1.5 * vmin };
+          tl.to(line.el, { ...away, duration: outDur, ease: 'power1.in' }, visibleEnd - outDur);
+
+          // Destaque pelos tempos corrigidos da letra, nunca pela batida (RF-031).
+          if (karaoke && line.words) {
+            line.spans.forEach((span, j) => {
+              const w = line.words[j];
+              tl.set(span, { attr: { 'data-s': 'active' } }, w.startMs / 1000);
+              tl.set(span, { attr: { 'data-s': 'sung' } }, w.endMs / 1000);
+            });
+          } else {
+            // Sem tempo por palavra: a linha inteira acende no intervalo dela (modo linha).
+            line.spans.forEach((span) => {
+              tl.set(span, { attr: { 'data-s': 'active' } }, start);
+              tl.set(span, { attr: { 'data-s': 'sung' } }, line.endMs / 1000);
+            });
+          }
+        });
+      });
+
+      // ---------------------------------------------------------- reatividade
+      const F = data.features;
+      const n = F.rms.length;
+      // Suavização causal por vínculo, pré-calculada (o mesmo valor em qualquer seek).
+      function series(source, smoothing) {
+        const raw = source === 'onset' || source === 'beat' ? null : F[source];
+        if (!raw) return null;
+        const out = new Float32Array(n);
+        let acc = raw[0] || 0;
+        for (let i = 0; i < n; i += 1) {
+          acc = smoothing * acc + (1 - smoothing) * raw[i];
+          out[i] = acc;
+        }
+        return out;
+      }
+      const sample = (arr, ms) => {
+        const pos = Math.max(0, ms) / F.sampleIntervalMs;
+        const i = Math.floor(pos);
+        if (i >= arr.length - 1) return arr[arr.length - 1] || 0;
+        return arr[i] + (arr[i + 1] - arr[i]) * (pos - i);
+      };
+      // Eventos (onset/batida) acima do limiar, espaçados por minEventGapMs.
+      function events(source, threshold) {
+        const list = source === 'onset' ? data.onsets : data.beatTimesMs.map((t) => ({ timeMs: t, strength: 1 }));
+        const out = [];
+        let last = -Infinity;
+        for (const e of list) {
+          if (e.strength < threshold || e.timeMs - last < minEventGapMs) continue;
+          out.push(e);
+          last = e.timeMs;
+        }
+        return out;
+      }
+      function lastBefore(list, ms) {
+        let lo = 0;
+        let hi = list.length - 1;
+        let ans = -1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >> 1;
+          if (list[mid].timeMs <= ms) {
+            ans = mid;
+            lo = mid + 1;
+          } else hi = mid - 1;
+        }
+        return ans;
+      }
+      function sectionGain(ms) {
+        const s = data.sections.find((x) => ms >= x.startMs && ms < x.endMs);
+        if (!s || preset === 'minimal') return 1;
+        return s.type === 'chorus' ? 1.25 : s.type === 'verse' ? 0.8 : 1;
+      }
+
+      const limits = {
+        neon: { scale: 0.08, glow: 1.6, shake: 0 },
+        minimal: { scale: 0.03, glow: 0, shake: 0 },
+        glitch_rock: { scale: 0.12, glow: 1, shake: 1.6 },
+      }[preset];
+      const bindings = data.bindings
+        .filter((b) => b.enabled && k > 0)
+        .filter((b) => !(reduced && (b.target === 'scale' || b.target === 'position' || b.target === 'particles')))
+        .map((b, i) => ({ ...b, values: series(b.source, b.smoothing), events: series(b.source, 0) ? null : events(b.source, b.threshold), seed: 1000 + i }));
+
+      const decayMs = 160;
+      function bindingValue(b, ms) {
+        let v;
+        let ev = null;
+        if (b.values) v = sample(b.values, ms);
+        else {
+          const idx = lastBefore(b.events, ms);
+          if (idx < 0) return { v: 0, ev: -1 };
+          ev = idx;
+          v = b.events[idx].strength * Math.exp(-(ms - b.events[idx].timeMs) / decayMs);
+        }
+        if (b.values && v < b.threshold) v = 0;
+        else if (b.values) v = (v - b.threshold) / (1 - b.threshold || 1);
+        return { v: Math.min(b.clamp, v * b.gain), ev };
+      }
+
+      const bg = document.getElementById('bg');
+      const fx = document.getElementById('fx');
+      const proxy = { t: 0 };
+      function applyReactive() {
+        const ms = proxy.t * 1000;
+        const g = k * sectionGain(ms);
+        let scale = 1;
+        let glow = 0;
+        let bgOpacity = 1;
+        let dx = 0;
+        let dy = 0;
+        let split = 0;
+        for (const b of bindings) {
+          const { v, ev } = bindingValue(b, ms);
+          if (b.target === 'scale') scale += v * limits.scale * g;
+          else if (b.target === 'glow') glow += v * limits.glow * g * (reduced ? 0.5 : 1);
+          else if (b.target === 'opacity') bgOpacity = Math.min(bgOpacity, 1 - g * 0.65 * (1 - v));
+          else if (b.target === 'position' && ev >= 0) {
+            const r = rng(b.seed * 7919 + ev);
+            dx += (r() * 2 - 1) * v * limits.shake * g * vmin;
+            dy += (r() * 2 - 1) * v * limits.shake * 0.5 * g * vmin;
+            split += v * 0.6 * g;
+          }
+        }
+        stage.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+        stage.style.setProperty('--glow', glow.toFixed(3));
+        stage.style.setProperty('--split', Math.min(0.8, split).toFixed(3));
+        bg.style.opacity = Math.max(0.15, bgOpacity).toFixed(3);
+      }
+      tl.to(proxy, { t: duration, duration, ease: 'none', onUpdate: applyReactive }, 0);
+      applyReactive();
+
+      // Partículas e barras de glitch: posições derivadas da semente e do índice do evento.
+      bindings.filter((b) => b.target === 'particles').forEach((b) => {
+        b.events.forEach((e, ei) => {
+          const r = rng(b.seed * 104729 + ei);
+          const count = 4 + Math.round(e.strength * 4 * k);
+          for (let p = 0; p < count; p += 1) {
+            const dot = document.createElement('div');
+            dot.className = 'particle';
+            const x = 0.1 + r() * 0.8;
+            const y = safe.top + r() * (1 - safe.top - safe.bottom);
+            dot.style.left = `${x * 100}%`;
+            dot.style.top = `${y * 100}%`;
+            fx.appendChild(dot);
+            const at = e.timeMs / 1000;
+            if (at >= duration) continue;
+            tl.fromTo(dot, { opacity: 0, scale: 0.4, x: 0, y: 0 }, { opacity: 0.85 * k, scale: 1, duration: 0.06, ease: 'none' }, at);
+            tl.to(dot, { opacity: 0, x: (r() * 2 - 1) * 6 * vmin, y: -(2 + r() * 6) * vmin, scale: 0.2, duration: 0.7, ease: 'power2.out' }, at + 0.06);
+          }
+        });
+      });
+      if (preset === 'glitch_rock' && !reduced) {
+        bindings.filter((b) => b.target === 'position').forEach((b) => {
+          b.events.forEach((e, ei) => {
+            const r = rng(b.seed * 15485863 + ei);
+            const at = e.timeMs / 1000;
+            if (at >= duration) return;
+            for (let i = 0; i < 2; i += 1) {
+              const bar = document.createElement('div');
+              bar.className = 'bar';
+              bar.style.top = `${(safe.top + r() * (1 - safe.top - safe.bottom)) * 100}%`;
+              bar.style.height = `${(0.4 + r() * 1.6) * vmin}px`;
+              fx.appendChild(bar);
+              const peak = (vars.limitFlashes ? 0.45 : 0.8) * e.strength * k;
+              tl.fromTo(bar, { opacity: 0, x: 0 }, { opacity: peak, x: (r() * 2 - 1) * 4 * vmin, duration: 0.03, ease: 'none' }, at);
+              tl.to(bar, { opacity: 0, duration: 0.09, ease: 'none' }, at + 0.03);
+            }
+          });
+        });
+      }
+
+      // Fundo: deriva lenta e determinística; progresso da faixa no Minimal.
+      if (!reduced && preset !== 'minimal') tl.to(bg, { xPercent: 3, yPercent: -2, duration, ease: 'sine.inOut' }, 0);
+      if (preset === 'minimal') tl.fromTo(progress, { scaleX: 0 }, { scaleX: 1, duration, ease: 'none' }, 0);
+      if (!vars.credit) credit.style.display = 'none';
+      else tl.from(credit, { opacity: 0, duration: 0.6 }, 0.2);
+
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

@@ -71,6 +71,10 @@ Série `arquetipos` + template `arquetipo-ativacao@1` (Hyperframes, 20 s, feito 
 
 Limitação: `SocialPost` não tem campo de tipo. A peça é montada no estúdio e o MP4 entra na agenda por upload em Mídias.
 
+## Reactive Lyrics
+
+Fase 0 (POC) de [reactive-lyrics-studio-requisitos.md](../reactive-lyrics-studio-requisitos.md): contratos, analisador musical, template `reactive-lyrics@1` e `npm run lyrics:render`. Estado, comandos e decisões em [reactive-lyrics.md](reactive-lyrics.md).
+
 ## Não verificado / limitações conhecidas
 
 - **Agente com o modelo real não foi executado**: não há `ANTHROPIC_API_KEY` configurada e o uso tem custo. As ferramentas foram testadas sem o modelo. Primeiro passo ao configurar: `GET http://127.0.0.1:4100/health` e um comando simples no estúdio.

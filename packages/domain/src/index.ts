@@ -13,3 +13,4 @@ export * from './channels.js';
 export * from './social-posts.js';
 export * from './migration.js';
 export * from './agent-contracts.js';
+export * from './lyrics.js';

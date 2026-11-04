@@ -10,3 +10,4 @@ export * from './ambient.js';
 export * from './transcription.js';
 export * from './hyperframes.js';
 export * from './resolve.js';
+export * from './music-analysis.js';
