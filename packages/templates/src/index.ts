@@ -40,11 +40,11 @@ export const TEMPLATES: TemplateDefinition[] = [
   { slug: 'arquetipo-ativacao', version: 1, name: 'Arquétipo: ativação à meia-noite', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: ['assets/arquetipo.png'], defaultDurationSec: 20 },
   { slug: 'mago-reflexao', version: 1, name: 'Reflexão do blog', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 15 },
   { slug: 'mago-erva', version: 1, name: 'Erva: tradição e cuidado', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: [], defaultDurationSec: 30 },
-  // Letra, mapa musical e vínculos entram em assets/lyrics-data.js (gerado por buildLyricsDataScript).
+  // Arte recortada (PNG com transparência) em assets/arquetipo.png; durações das cenas vêm da narração.
+  { slug: 'mago-arquetipo', version: 1, name: 'Arquétipo narrado', channelSlug: 'mago-da-meia-noite', engine: 'hyperframes', requiredFiles: ['assets/arquetipo.png'], defaultDurationSec: 70 },
+  // Letra e valores reativos por frame entram em assets/lyrics-data.js (buildLyricsDataScript, @editor-video/domain).
   { slug: 'reactive-lyrics', version: 1, name: 'Reactive Lyrics', channelSlug: null, engine: 'hyperframes', requiredFiles: ['assets/lyrics-data.js'], defaultDurationSec: 15 },
 ];
-
-export * from './lyrics-presets.js';
 
 export function getTemplate(slug: string, version?: number): TemplateDefinition {
   const t = TEMPLATES.find((x) => x.slug === slug && (version === undefined || x.version === version));

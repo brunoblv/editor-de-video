@@ -13,6 +13,8 @@ export const PIPELINE_VERSIONS = {
   frames: 'frames-v1',
   render: 'render-v1',
   validate: 'validate-v1',
+  /** Mapa musical do Reactive Lyrics (a versão do algoritmo vai nos parâmetros). */
+  music: 'music-v1',
 } as const;
 
 export type ProcessingStep = keyof typeof PIPELINE_VERSIONS;

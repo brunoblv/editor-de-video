@@ -14,3 +14,6 @@ export * from './social-posts.js';
 export * from './migration.js';
 export * from './agent-contracts.js';
 export * from './lyrics.js';
+export * from './reactive.js';
+export * from './lyrics-cinematic.js';
+export * from './lyrics-project.js';

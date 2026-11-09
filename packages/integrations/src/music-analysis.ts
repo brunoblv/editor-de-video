@@ -49,6 +49,7 @@ export type AnalyzeMusicOptions = {
 };
 
 export async function decodeMono(file: string, workDir: string, options: { signal?: AbortSignal; paths?: ToolPaths } = {}): Promise<Float32Array> {
+  await fsp.mkdir(workDir, { recursive: true });
   const raw = path.join(workDir, `analysis-${process.pid}-${Date.now()}.f32`);
   try {
     await runProcess(

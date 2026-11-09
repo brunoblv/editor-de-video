@@ -25,6 +25,8 @@ export type CompositionRenderInput = {
   height: number;
   durationSec: number;
   quality: 'preview' | 'final';
+  /** Taxa de quadros (padrão do Hyperframes: 30). Composições com tempo por frame passam a da timeline. */
+  fps?: { num: number; den: number };
   /** Diretório de trabalho exclusivo desta composição/tentativa. */
   workDir: string;
   outputPath: string;
@@ -91,6 +93,7 @@ export async function renderComposition(input: CompositionRenderInput): Promise<
         bin.script,
         'render',
         '--quality', input.quality === 'final' ? 'delivery' : 'draft',
+        ...(input.fps ? ['--fps', input.fps.den === 1 ? String(input.fps.num) : `${input.fps.num}/${input.fps.den}`] : []),
         '--variables-file', 'variables.json',
         '--strict-variables',
         '--output', part,

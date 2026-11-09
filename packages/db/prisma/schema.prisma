@@ -705,6 +705,8 @@ model Asset {
   transcripts TranscriptVersion[]
   channels    ChannelAsset[]
   postMedia   SocialPostMedia[]
+  lyricsAudio LyricsProject[] @relation("LyricsAudio")
+  lyricsText  LyricsProject[] @relation("LyricsText")
 
   @@unique([workspaceId, sha256])
   @@index([workspaceId, kind])
@@ -775,6 +777,7 @@ model VideoProject {
   publications    Publication[]
   comments        ReviewComment[]
   verseUsages     VerseUsage[]
+  lyrics          LyricsProject?
 
   @@index([workspaceId, channelId])
   @@index([state])
@@ -1104,4 +1107,32 @@ model LegacyMapping {
 
   @@unique([sourceTable, sourceId, targetTable])
   @@index([targetTable, targetId])
+}
+
+/// Reactive Lyrics: dados do projeto que não pertencem à timeline (origem,
+/// direitos, mapa musical). Letra, tempos e visual vivem nas revisões.
+model LyricsProject {
+  id                 String       @id @default(cuid())
+  projectId          String       @unique
+  project            VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  audioAssetId       String
+  audioAsset         Asset        @relation("LyricsAudio", fields: [audioAssetId], references: [id], onDelete: Restrict)
+  /// Arquivo de letra importado (proveniência); null quando colado como texto
+  lyricsAssetId      String?
+  lyricsAsset        Asset?       @relation("LyricsText", fields: [lyricsAssetId], references: [id], onDelete: SetNull)
+  language           String?
+  /// txt | lrc | srt | vtt
+  lyricsFormat       String
+  /// Declaração de autorização de uso do áudio e da letra; exigida no render final
+  rightsDeclaredAt   DateTime?
+  rightsDeclaredById String?
+  rightsNote         String?
+  /// Mapa musical no storage (JSON); o banco guarda só a chave
+  analysisVersion    String?
+  musicalMapKey      String?
+  bpmEstimate        Float?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([audioAssetId])
 }

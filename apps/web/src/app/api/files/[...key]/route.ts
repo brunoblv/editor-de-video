@@ -21,6 +21,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.wav': 'audio/wav',
   '.mp3': 'audio/mpeg',
   '.m4a': 'audio/mp4',
+  '.flac': 'audio/flac',
 };
 
 type Params = { params: Promise<{ key: string[] }> };

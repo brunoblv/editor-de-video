@@ -12,8 +12,9 @@ export const runtime = 'nodejs';
 
 /**
  * Upload por streaming (corpo bruto), sem carregar o arquivo em memória:
- *   POST /api/v3/assets/uploads?name=clip.mp4[&workspaceId=…&license=…&projectId=…]
+ *   POST /api/v3/assets/uploads?name=clip.mp4[&workspaceId=…&license=…&projectId=…&analyze=0]
  * Registra o original por hash e enfileira a análise (proxy/inspeção).
+ * `analyze=0` só registra (o Reactive Lyrics enfileira a própria análise).
  */
 export async function POST(request: NextRequest): Promise<Response> {
   return v3(async () => {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     // A análise precisa de um projeto para o job; usa o informado ou o mais recente.
     const projectId = sp.get('projectId') ?? (await prisma.videoProject.findFirst({ where: { workspaceId }, orderBy: { updatedAt: 'desc' }, select: { id: true } }))?.id;
     let jobId: string | null = null;
-    if (projectId && (asset.kind === 'VIDEO' || asset.kind === 'AUDIO') && !asset.proxyKey) {
+    if (sp.get('analyze') !== '0' && projectId && (asset.kind === 'VIDEO' || asset.kind === 'AUDIO') && !asset.proxyKey) {
       const job = await enqueueJob({
         projectId,
         kind: 'ANALYZE',

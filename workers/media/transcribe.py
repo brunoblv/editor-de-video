@@ -8,7 +8,23 @@ Tempos são do ORIGINAL. Instale com: pip install -r workers/media/requirements.
 """
 import argparse
 import json
+import os
+import subprocess
 import sys
+
+
+def decode_audio(path: str):
+    """Decodifica com FFmpeg (16 kHz mono float32), sem depender do PyAV:
+    versões novas do PyAV quebram o decodificador embutido do faster-whisper."""
+    import numpy as np
+
+    ffmpeg = os.environ.get("FFMPEG_PATH") or "ffmpeg"
+    raw = subprocess.run(
+        [ffmpeg, "-nostdin", "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    return np.frombuffer(raw, dtype=np.float32)
 
 
 def main() -> int:
@@ -18,6 +34,8 @@ def main() -> int:
     parser.add_argument("--language", default=None)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--compute-type", default="default")
+    # Música: o VAD (treinado em fala) corta trechos cantados com instrumental.
+    parser.add_argument("--no-vad", action="store_true")
     args = parser.parse_args()
 
     try:
@@ -27,7 +45,7 @@ def main() -> int:
         return 2
 
     model = WhisperModel(args.model, device=args.device, compute_type=args.compute_type)
-    segments, info = model.transcribe(args.input, language=args.language, word_timestamps=True, vad_filter=True)
+    segments, info = model.transcribe(decode_audio(args.input), language=args.language, word_timestamps=True, vad_filter=not args.no_vad)
     out = {"language": info.language, "segments": []}
     for seg in segments:
         out["segments"].append(
@@ -36,7 +54,12 @@ def main() -> int:
                 "startSec": round(seg.start, 3),
                 "endSec": round(seg.end, 3),
                 "words": [
-                    {"text": w.word.strip(), "startSec": round(w.start, 3), "endSec": round(w.end, 3)}
+                    {
+                        "text": w.word.strip(),
+                        "startSec": round(w.start, 3),
+                        "endSec": round(w.end, 3),
+                        "confidence": round(w.probability, 3),
+                    }
                     for w in (seg.words or [])
                 ],
             }

@@ -30,6 +30,10 @@ export type PlannedVideoLayer = {
   templateId?: string;
   templateVersion?: number;
   params?: Record<string, unknown>;
+  /** Composição: segundos do início da composição cortados pelo trecho (range). */
+  compositionInSec?: number;
+  /** Composição: duração total do item, para quem renderiza a composição inteira. */
+  compositionDurationSec?: number;
 };
 
 export type PlannedAudio = {
@@ -57,6 +61,19 @@ export type PlannedText = {
   style: Partial<TextStyle>;
 };
 
+/** Linha de letra para a composição (trilha 'lyrics'); frames relativos ao início do plano. */
+export type PlannedLyricLine = {
+  itemId: string;
+  text: string;
+  startFrame: number;
+  endFrame: number;
+  status: string;
+  /** null = modo linha (sem tempo por palavra). */
+  words: Array<{ text: string; startFrame: number; endFrame: number }> | null;
+};
+
+export type RenderRange = { startFrame: number; endFrame: number };
+
 export type RenderPlan = {
   /** Hash do documento + variante: identifica exatamente o que foi renderizado. */
   planHash: string;
@@ -74,6 +91,9 @@ export type RenderPlan = {
   video: PlannedVideoLayer[];
   audio: PlannedAudio[];
   text: PlannedText[];
+  lyrics: PlannedLyricLine[];
+  /** Trecho da timeline renderizado (prévia segmentada); null = tudo. */
+  range: RenderRange | null;
   output: TimelineDocument['output'];
 };
 
@@ -82,6 +102,8 @@ export type CompileOptions = {
   quality: RenderQuality;
   /** Fator de escala da prévia (ex.: 0.5); o final é sempre 1. */
   previewScale?: number;
+  /** Renderiza só [startFrame, endFrame) da timeline, com tempos relativos ao trecho. */
+  range?: RenderRange | null;
 };
 
 /** Serialização estável (chaves ordenadas) para hashes reprodutíveis. */
@@ -108,22 +130,37 @@ export function compileTimeline(doc: TimelineDocument, options: CompileOptions):
   const useProxy = options.quality === 'preview';
   const sec = (frames: number) => toSeconds(frames, fps);
 
+  const total = doc.video.durationFrames;
+  const range = options.range ?? null;
+  if (range && (range.startFrame < 0 || range.endFrame <= range.startFrame || range.startFrame >= total)) {
+    throw new Error(`Trecho inválido: ${range.startFrame}–${range.endFrame} (timeline com ${total} frames)`);
+  }
+  const rs = range?.startFrame ?? 0;
+  const re = range ? Math.min(range.endFrame, total) : total;
+
   const video: PlannedVideoLayer[] = [];
   const audio: PlannedAudio[] = [];
   const text: PlannedText[] = [];
+  const lyrics: PlannedLyricLine[] = [];
 
   const tracks = [...doc.tracks].sort((a, b) => a.order - b.order);
   for (const track of tracks) {
     for (const item of [...track.items].sort((a, b) => a.timelineStart - b.timelineStart)) {
-      const startSec = sec(item.timelineStart);
-      const endSec = sec(item.timelineStart + item.duration);
+      // Recorte no trecho, em frames (um único arredondamento ao converter para segundos).
+      const s0 = Math.max(item.timelineStart, rs);
+      const e0 = Math.min(item.timelineStart + item.duration, re);
+      if (e0 <= s0) continue;
+      const head = s0 - item.timelineStart;
+      const startSec = sec(s0 - rs);
+      const endSec = sec(e0 - rs);
 
       if (item.kind === 'clip') {
         const asset = doc.assets[item.assetId]!;
         const speed = item.playbackRate.num / item.playbackRate.den;
         const isStill = asset.kind === 'image';
-        const sourceInSec = isStill ? 0 : toSeconds(item.sourceIn, asset.sourceTimebase);
-        const sourceOutSec = isStill ? endSec - startSec : toSeconds(item.sourceOut, asset.sourceTimebase);
+        const sourceInSec = isStill ? 0 : toSeconds(item.sourceIn, asset.sourceTimebase) + sec(head) * speed;
+        const whole = head === 0 && e0 === item.timelineStart + item.duration;
+        const sourceOutSec = isStill ? endSec - startSec : whole ? toSeconds(item.sourceOut, asset.sourceTimebase) : sourceInSec + (endSec - startSec) * speed;
         if (track.type === 'video') {
           video.push({
             itemId: item.id,
@@ -152,8 +189,9 @@ export function compileTimeline(doc: TimelineDocument, options: CompileOptions):
             sourceOutSec,
             speed,
             gainDb: item.audio.gainDb,
-            fadeInSec: sec(item.audio.fadeInFrames),
-            fadeOutSec: sec(item.audio.fadeOutFrames),
+            // Fades só valem se a borda correspondente do item está dentro do trecho.
+            fadeInSec: head === 0 ? sec(item.audio.fadeInFrames) : 0,
+            fadeOutSec: e0 === item.timelineStart + item.duration ? sec(item.audio.fadeOutFrames) : 0,
             pan: item.audio.pan,
           });
         }
@@ -170,6 +208,26 @@ export function compileTimeline(doc: TimelineDocument, options: CompileOptions):
           templateId: item.templateId,
           templateVersion: item.templateVersion,
           params: item.params,
+          compositionInSec: sec(head),
+          compositionDurationSec: sec(item.duration),
+        });
+      } else if (track.role === 'lyrics' && item.kind === 'caption') {
+        // A letra é desenhada pela composição, não queimada como legenda.
+        if (track.muted) continue;
+        lyrics.push({
+          itemId: item.id,
+          text: item.text,
+          startFrame: s0 - rs,
+          endFrame: e0 - rs,
+          status: item.lyric?.status ?? 'SUGGESTED',
+          words:
+            item.words.length > 0 && head === 0 && e0 === item.timelineStart + item.duration
+              ? item.words.map((w) => ({ text: w.text, startFrame: w.start - rs, endFrame: w.end - rs }))
+              : item.words.length > 0
+                ? item.words
+                    .filter((w) => w.end > s0 && w.start < e0)
+                    .map((w) => ({ text: w.text, startFrame: Math.max(w.start, s0) - rs, endFrame: Math.min(w.end, e0) - rs }))
+                : null,
         });
       } else if (!track.muted) {
         text.push({
@@ -188,6 +246,7 @@ export function compileTimeline(doc: TimelineDocument, options: CompileOptions):
   const planHash = createHash('sha256')
     .update(editorialHash(doc))
     .update(`|${variant.id}`)
+    .update(range ? `|${rs}-${re}` : '')
     .digest('hex');
 
   return {
@@ -200,11 +259,13 @@ export function compileTimeline(doc: TimelineDocument, options: CompileOptions):
     width: even(variant.width),
     height: even(variant.height),
     fps,
-    durationSec: sec(doc.video.durationFrames),
-    durationFrames: doc.video.durationFrames,
+    durationSec: sec(re - rs),
+    durationFrames: re - rs,
     video,
     audio,
     text,
+    lyrics,
+    range: range ? { startFrame: rs, endFrame: re } : null,
     output: doc.output,
   };
 }
@@ -221,6 +282,8 @@ export function editorialDifferences(a: RenderPlan, b: RenderPlan): string[] {
     video: p.video.map(({ useProxy: _u, ...rest }) => rest),
     audio: p.audio.map(({ useProxy: _u, ...rest }) => rest),
     text: p.text,
+    lyrics: p.lyrics,
+    range: p.range,
   });
   const sa = strip(a);
   const sb = strip(b);

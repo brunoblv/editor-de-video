@@ -59,6 +59,22 @@ export function fromSeconds(seconds: number, r: Rate): number {
   return Math.round((seconds * r.num) / r.den);
 }
 
+export const MS_RATE: Rate = { num: 1000, den: 1 };
+
+/**
+ * Milissegundos inteiros (análise musical, LRC/SRT/VTT, alinhador) → frame
+ * mais próximo. Conversão única e explícita: o tempo canônico da timeline
+ * continua sendo o frame.
+ */
+export function msToFrames(ms: number, fps: Rate): number {
+  return rescale(Math.round(ms), MS_RATE, fps);
+}
+
+/** Frame → milissegundo inteiro mais próximo (para composição e exibição). */
+export function framesToMs(frames: number, fps: Rate): number {
+  return rescale(frames, fps, MS_RATE);
+}
+
 /**
  * Duração na timeline de um trecho de fonte [sourceIn, sourceOut) tocado a
  * `playbackRate` (2/1 = duas vezes mais rápido).

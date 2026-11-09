@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatTimecode, timelineRate, type TimelineOperation } from '@editor-video/timeline';
 import { api, describeError, HubApiError } from '../api';
+import { LyricsStudio } from '../lyrics/LyricsStudio';
 import { ChatPanel } from './ChatPanel';
 import { LeftPanel } from './LeftPanel';
 import { Properties } from './Properties';
@@ -190,6 +191,8 @@ export function Studio({ projectId, initialTab }: { projectId: string; initialTa
 
   if (loadError) return <div className="notice" data-tone="err" role="alert">{loadError} <button onClick={() => void load()}>Tentar de novo</button></div>;
   if (!project || !doc) return <div className="state" role="status">Abrindo estúdio…</div>;
+  // Projeto Reactive Lyrics tem estúdio próprio (waveform, letra, visual reativo).
+  if (project.lyrics) return <LyricsStudio projectId={projectId} />;
 
   const studio: StudioApi = { doc, readOnly, apply: (ops, summary) => apply(ops, summary), reload: load, playhead, seek, selection, select: setSelection, variantId };
   const variants = [{ id: null as string | null, label: `Principal ${doc.video.width}×${doc.video.height}` }, ...doc.variants.filter((v) => v.id !== 'base').map((v) => ({ id: v.id, label: `${v.label} ${v.width}×${v.height}` }))];

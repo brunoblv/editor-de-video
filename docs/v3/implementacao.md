@@ -67,13 +67,15 @@ Limitações: **nada é publicado automaticamente** e não há aviso fora do hub
 
 ### Arquétipos (Mago da Meia-Noite)
 
-Série `arquetipos` + template `arquetipo-ativacao@1` (Hyperframes, 20 s, feito para 9:16 e adaptado a 16:9). Identidade: na noite, os ponteiros de um selo-relógio se alinham à meia-noite; a tinta do arquétipo abre o papel e revela a arte em aquarela; três dádivas ("Ao ativar, pode trazer") entram numa faixa de tinta; fecha com "Em troca, pede". A cor `accent` muda por arquétipo; a arte entra em `$file:assets/arquetipo.png` e se funde ao fundo por multiplicação, então precisa ter fundo claro.
+Layout oficial da série `arquetipos`: template `mago-arquetipo@1` (Hyperframes, narrado, 9:16 e adaptado a 16:9), na identidade do Mago (noite roxa, estrelas, lua, Domine/Karla, @o.magodameianoite). A arte entra recortada em `assets/arquetipo.png` e surge da escuridão: na abertura só os olhos acendem (`olhos` em % da arte), no nome ela sai da sombra, uma luz atravessa a pelagem na origem, escurece na sombra e volta mais forte no pedido. Dez cenas: abertura, nome e epíteto, origem, mito, três dádivas ("Pode trazer"), o lado sombrio, "Em troca, pede", fechamento e chamada. Render local narrado com Gemini TTS, cada cena com a duração da fala: `npm run mago:arquetipo -w @editor-video/render-worker -- <roteiro.json> <saida.mp4>` (formato do roteiro e `fundoBranco` para recortar arte escura de fundo branco em `apps/render-worker/src/render-mago-arquetipo.ts`). O roteiro da pantera narrado sai com ~90–100 s; para menos de 60 s, corte o mito e uma dádiva.
+
+Anterior (mantido no catálogo, fora da série): `arquetipo-ativacao@1` (Hyperframes, 20 s, feito para 9:16 e adaptado a 16:9). Identidade: na noite, os ponteiros de um selo-relógio se alinham à meia-noite; a tinta do arquétipo abre o papel e revela a arte em aquarela; três dádivas ("Ao ativar, pode trazer") entram numa faixa de tinta; fecha com "Em troca, pede". A cor `accent` muda por arquétipo; a arte entra em `$file:assets/arquetipo.png` e se funde ao fundo por multiplicação, então precisa ter fundo claro.
 
 Limitação: `SocialPost` não tem campo de tipo. A peça é montada no estúdio e o MP4 entra na agenda por upload em Mídias.
 
 ## Reactive Lyrics
 
-Fase 0 (POC) de [reactive-lyrics-studio-requisitos.md](../reactive-lyrics-studio-requisitos.md): contratos, analisador musical, template `reactive-lyrics@1` e `npm run lyrics:render`. Estado, comandos e decisões em [reactive-lyrics.md](reactive-lyrics.md).
+P0 de [claude-reactive-lyrics-implementacao.md](../claude-reactive-lyrics-implementacao.md): projeto Lyrics no hub (Projetos → Novo Reactive Lyrics), letra como trilha `role: 'lyrics'` editada por revisões, análise musical no job `ANALYZE`, efeitos calculados por frame em TypeScript, prévia de trecho (`range` no compilador) e finais 9:16/16:9 pela fila. Migração aditiva `20261103000000_reactive_lyrics` (tabela `LyricsProject`). Operação, testes, evidências e limitações em [reactive-lyrics.md](reactive-lyrics.md); auditoria e plano em [reactive-lyrics-studio-plano.md](../reactive-lyrics-studio-plano.md).
 
 ## Não verificado / limitações conhecidas
 

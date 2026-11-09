@@ -25,6 +25,8 @@ describe('templates Hyperframes', () => {
     assert.equal(validateTemplateParams('mago-reflexao', { quote: 'x'.repeat(241) }).ok, false);
     assert.ok(validateTemplateParams('mago-erva', { hook: 'Por que arruda?', hookSec: 3.5 }).ok);
     assert.equal(validateTemplateParams('mago-erva', { hookSec: 0.2 }).ok, false);
+    assert.ok(validateTemplateParams('mago-arquetipo', { name: 'Pantera Negra', lore1Sec: 9.5, eyeGlow: false }).ok);
+    assert.equal(validateTemplateParams('mago-arquetipo', { gift1Text: 'x'.repeat(191) }).ok, false);
     assert.ok(validateTemplateParams('reactive-lyrics', { preset: 'glitch_rock', intensity: 0, reducedMotion: true }).ok);
     assert.equal(validateTemplateParams('reactive-lyrics', { preset: 'strobe', intensity: 101 }).ok, false);
   });

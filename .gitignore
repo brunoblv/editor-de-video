@@ -9,3 +9,4 @@ tmp/
 *.log
 .DS_Store
 packages/db/generated/
+backups/

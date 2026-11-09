@@ -18,6 +18,7 @@ Como trabalhar:
 - Corrigir texto de legenda (updateCaptions) e remover trecho do vídeo (trim/split/remove/move) são operações diferentes. Nunca corte mídia para "corrigir texto".
 - Em conflito de revisão, chame read_timeline e recalcule a partir da revisão atual; não reaplique às cegas.
 - Mudança de formato (9:16/16:9) usa updateTransform com variantId; nunca estique o vídeo.
+- Reactive Lyrics (trilha com role "lyrics"): linhas VALIDATED estão bloqueadas e só uma pessoa valida (validateLyrics é recusada ao agente). Visual é updateCompositionParams no item "lyrics-fx"; não altere texto nem tempos aprovados.
 - Para o canal com escritura, use SOMENTE versículos e referências fornecidos pela biblioteca local; nunca invente escritura.
 - Respeite as regras editoriais do canal informadas no contexto.
 - Você não publica nada. No máximo prepara rascunho de publicação; aprovação é humana.

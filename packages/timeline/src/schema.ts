@@ -115,6 +115,20 @@ export const captionWordSchema = z.object({
   text: z.string(),
   start: nonNegInt,
   end: posInt,
+  /** Confiança do alinhador automático (0–1); ausente para tempo importado/manual. */
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+/** Estado de sincronização de uma linha de letra (Reactive Lyrics). */
+export const LYRIC_STATUSES = ['UNALIGNED', 'SUGGESTED', 'LOW_CONFIDENCE', 'VALIDATED'] as const;
+export const LYRIC_SOURCES = ['import', 'manual', 'forced_alignment', 'asr'] as const;
+
+export const lyricMetaSchema = z.object({
+  /** Estrofe de origem (linha em branco no texto separa estrofes). */
+  stanza: nonNegInt.default(0),
+  /** Só uma pessoa marca VALIDATED (operação validateLyrics, que também bloqueia o item). */
+  status: z.enum(LYRIC_STATUSES),
+  source: z.enum(LYRIC_SOURCES),
 });
 
 export const captionItemSchema = z.object({
@@ -128,6 +142,8 @@ export const captionItemSchema = z.object({
     .nullable()
     .default(null),
   words: z.array(captionWordSchema).default([]),
+  /** Presente só em trilhas de letra (role 'lyrics'). Opcional: documentos antigos não mudam de hash. */
+  lyric: lyricMetaSchema.optional(),
 });
 
 export const compositionItemSchema = z.object({
@@ -150,6 +166,11 @@ export const itemSchema = z.discriminatedUnion('kind', [
 export const trackSchema = z.object({
   id,
   type: z.enum(['video', 'audio', 'text', 'caption']),
+  /**
+   * Papel especial da trilha. 'lyrics' = letra sincronizada desenhada por uma
+   * composição (não vira legenda queimada pelo FFmpeg).
+   */
+  role: z.enum(['lyrics']).optional(),
   name: z.string().max(80).optional(),
   order: z.number().int(),
   muted: z.boolean().default(false),
@@ -220,6 +241,9 @@ export type TextStyle = z.infer<typeof textStyleSchema>;
 export type ClipItem = z.infer<typeof clipItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
 export type CaptionItem = z.infer<typeof captionItemSchema>;
+export type CaptionWord = z.infer<typeof captionWordSchema>;
+export type LyricMeta = z.infer<typeof lyricMetaSchema>;
+export type LyricStatus = (typeof LYRIC_STATUSES)[number];
 export type CompositionItem = z.infer<typeof compositionItemSchema>;
 export type TimelineItem = z.infer<typeof itemSchema>;
 export type Track = z.infer<typeof trackSchema>;

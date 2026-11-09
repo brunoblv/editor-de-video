@@ -26,6 +26,8 @@ const EXT_KIND: Record<string, AssetKind> = {
   '.wav': 'AUDIO', '.mp3': 'AUDIO', '.m4a': 'AUDIO', '.flac': 'AUDIO', '.ogg': 'AUDIO', '.aac': 'AUDIO',
   '.png': 'IMAGE', '.jpg': 'IMAGE', '.jpeg': 'IMAGE', '.webp': 'IMAGE',
   '.ttf': 'FONT', '.otf': 'FONT', '.woff2': 'FONT',
+  // Letras (Reactive Lyrics): guardadas como documento para registrar a origem.
+  '.txt': 'DOCUMENT', '.lrc': 'DOCUMENT', '.srt': 'DOCUMENT', '.vtt': 'DOCUMENT',
 };
 
 export function kindForFile(name: string): AssetKind {

@@ -4,12 +4,15 @@
  * configuração e comparado no hardware real. A transcrição é sempre do
  * ORIGINAL: correções de texto nunca cortam mídia (RF-06).
  */
+import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { runProcess, toolPaths, type ToolPaths } from './process.js';
 
-export type TranscriptWord = { text: string; startSec: number; endSec: number };
+/** `confidence` (0–1) quando o provedor informa (faster-whisper). */
+export type TranscriptWord = { text: string; startSec: number; endSec: number; confidence?: number };
 export type TranscriptSegment = { text: string; startSec: number; endSec: number; words: TranscriptWord[] };
 export type Transcript = {
   language: string;
@@ -21,8 +24,15 @@ export type Transcript = {
 export interface TranscriptionProvider {
   readonly name: string;
   readonly model: string;
-  transcribe(file: string, options: { language?: string; signal?: AbortSignal }): Promise<Transcript>;
+  transcribe(file: string, options: TranscribeOptions): Promise<Transcript>;
 }
+
+export type TranscribeOptions = {
+  language?: string;
+  signal?: AbortSignal;
+  /** Canto com instrumental: desliga filtros de voz que cortam a música. */
+  music?: boolean;
+};
 
 type WhisperCppToken = { text?: string; offsets?: { from?: number; to?: number } };
 type WhisperCppSegment = { text?: string; offsets?: { from?: number; to?: number }; tokens?: WhisperCppToken[] };
@@ -37,7 +47,7 @@ export class WhisperCppProvider implements TranscriptionProvider {
     private readonly paths: ToolPaths = toolPaths(),
   ) {}
 
-  async transcribe(file: string, options: { language?: string; signal?: AbortSignal }): Promise<Transcript> {
+  async transcribe(file: string, options: TranscribeOptions): Promise<Transcript> {
     if (!this.model) throw new Error('WHISPER_MODEL não configurado (caminho do modelo ggml).');
     const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'whisper-'));
     try {
@@ -102,15 +112,23 @@ export class FasterWhisperProvider implements TranscriptionProvider {
     readonly model: string,
   ) {}
 
-  async transcribe(file: string, options: { language?: string; signal?: AbortSignal }): Promise<Transcript> {
+  async transcribe(file: string, options: TranscribeOptions): Promise<Transcript> {
     const { stdout } = await runProcess(
       this.python,
-      ['-I', this.script, '--model', this.model, '--input', file, ...(options.language ? ['--language', options.language] : [])],
-      { signal: options.signal, inheritFullEnv: true },
+      ['-I', this.script, '--model', this.model, '--input', file, ...(options.language ? ['--language', options.language] : []), ...(options.music ? ['--no-vad'] : [])],
+      { signal: options.signal, inheritFullEnv: true, timeoutMs: 30 * 60_000 },
     );
     const data = JSON.parse(stdout) as { language: string; segments: TranscriptSegment[] };
     return { ...data, provider: this.name, model: this.model };
   }
+}
+
+/** Script do repositório, independente do diretório de onde o worker foi iniciado. */
+const DEFAULT_FASTER_WHISPER_SCRIPT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'workers', 'media', 'transcribe.py');
+
+/** Ambiente Python isolado sugerido em docs/v3/reactive-lyrics.md. */
+export function defaultWhisperVenvPython(): string {
+  return path.join(os.homedir(), '.cache', 'editor-video', 'whisper-venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 }
 
 export function transcriptionProviderFromEnv(): TranscriptionProvider {
@@ -118,9 +136,29 @@ export function transcriptionProviderFromEnv(): TranscriptionProvider {
   if (provider === 'faster-whisper') {
     return new FasterWhisperProvider(
       process.env.PYTHON_BIN ?? 'python',
-      process.env.FASTER_WHISPER_SCRIPT ?? path.resolve('workers/media/transcribe.py'),
+      process.env.FASTER_WHISPER_SCRIPT ?? DEFAULT_FASTER_WHISPER_SCRIPT,
       process.env.FASTER_WHISPER_MODEL ?? 'small',
     );
   }
   return new WhisperCppProvider(process.env.WHISPER_BIN ?? 'whisper-cli', process.env.WHISPER_MODEL ?? '');
+}
+
+/**
+ * Provedor para transcrever letra cantada (Reactive Lyrics): faster-whisper
+ * do venv padrão ou o configurado em LYRICS_PYTHON_BIN; senão o provedor
+ * geral. Erro legível quando nada está instalado.
+ */
+export function lyricsTranscriptionProvider(): TranscriptionProvider {
+  const python = process.env.LYRICS_PYTHON_BIN || (fs.existsSync(defaultWhisperVenvPython()) ? defaultWhisperVenvPython() : null);
+  const model = process.env.LYRICS_WHISPER_MODEL || 'small';
+  if (python) return new FasterWhisperProvider(python, process.env.FASTER_WHISPER_SCRIPT ?? DEFAULT_FASTER_WHISPER_SCRIPT, model);
+  if (process.env.TRANSCRIPTION_PROVIDER === 'faster-whisper') return transcriptionProviderFromEnv();
+  const bin = process.env.WHISPER_BIN;
+  if (bin && process.env.WHISPER_MODEL && fs.existsSync(process.env.WHISPER_MODEL)) return transcriptionProviderFromEnv();
+  throw Object.assign(
+    new Error(
+      'Nenhum Whisper instalado para transcrever a letra. Instale o faster-whisper: python -m venv ~/.cache/editor-video/whisper-venv e depois pip install -r workers/media/requirements.txt nesse ambiente (ou defina LYRICS_PYTHON_BIN).',
+    ),
+    { category: 'DEPENDENCY_MISSING' },
+  );
 }

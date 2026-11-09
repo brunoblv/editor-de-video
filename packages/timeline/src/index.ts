@@ -10,6 +10,10 @@ export {
   assetRefSchema,
   audioSchema,
   captionItemSchema,
+  captionWordSchema,
+  lyricMetaSchema,
+  LYRIC_SOURCES,
+  LYRIC_STATUSES,
   clipItemSchema,
   compositionItemSchema,
   cropSchema,
@@ -28,6 +32,9 @@ export {
   type AssetRef,
   type AudioSettings,
   type CaptionItem,
+  type CaptionWord,
+  type LyricMeta,
+  type LyricStatus,
   type ClipItem,
   type CompositionItem,
   type Crop,
@@ -47,3 +54,4 @@ export * from './patch.js';
 export * from './commands.js';
 export * from './variants.js';
 export * from './inspect.js';
+export * from './lyrics.js';

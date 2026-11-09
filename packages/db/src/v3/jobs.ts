@@ -11,6 +11,7 @@ import { parseTimeline } from '@editor-video/timeline';
 import type { JobKind, Prisma, RenderJob } from '@prisma/client';
 import { prisma } from '../client.js';
 import { authorizeJob, authorizeRevision, type Actor } from './access.js';
+import { assertLyricsRenderable } from './lyrics.js';
 
 export const V3_QUEUES = {
   analysis: 'v3-analysis',
@@ -136,7 +137,14 @@ export async function requeueOrphans(olderThanMs = 30_000): Promise<number> {
   return count;
 }
 
-export type RenderRequest ={ revisionId: string; variantId?: string | null; quality: 'preview' | 'final'; idempotencyKey?: string | null };
+export type RenderRequest = {
+  revisionId: string;
+  variantId?: string | null;
+  quality: 'preview' | 'final';
+  idempotencyKey?: string | null;
+  /** Prévia de trecho: frames [startFrame, endFrame) da timeline. */
+  range?: { startFrame: number; endFrame: number } | null;
+};
 
 /** Solicita render: cria entrega PENDING + job; responde com jobId (§13). */
 export async function requestRender(actor: Actor, request: RenderRequest) {
@@ -146,7 +154,13 @@ export async function requestRender(actor: Actor, request: RenderRequest) {
   if (request.variantId && request.variantId !== 'base' && !doc.variants.some((v) => v.id === request.variantId)) {
     throw new DomainError('INVALID', `Variante ${request.variantId} não existe nesta revisão.`);
   }
-  const durationSec = (doc.video.durationFrames * doc.video.fpsDenominator) / doc.video.fpsNumerator;
+  const range = request.range ?? null;
+  if (range && (range.startFrame < 0 || range.endFrame <= range.startFrame || range.startFrame >= doc.video.durationFrames)) {
+    throw new DomainError('INVALID', 'Trecho fora da timeline.');
+  }
+  await assertLyricsRenderable(revision.projectId, doc, request.quality, range);
+  const frames = range ? Math.min(range.endFrame, doc.video.durationFrames) - range.startFrame : doc.video.durationFrames;
+  const durationSec = (frames * doc.video.fpsDenominator) / doc.video.fpsNumerator;
   const queue = request.quality === 'preview' ? V3_QUEUES.preview : durationSec > LONG_RENDER_THRESHOLD_SEC ? V3_QUEUES.renderLong : V3_QUEUES.renderShort;
   const deliverable = await prisma.deliverable.create({
     data: {
@@ -157,6 +171,7 @@ export async function requestRender(actor: Actor, request: RenderRequest) {
       origin: 'HUB',
       state: 'PENDING',
       presetVersion: doc.output.presetVersion,
+      ...(range ? { validationJson: json({ range }) } : {}),
     },
   });
   const job = await enqueueJob({
@@ -166,6 +181,7 @@ export async function requestRender(actor: Actor, request: RenderRequest) {
     revisionId: revision.id,
     variantId: request.variantId ?? null,
     deliverableId: deliverable.id,
+    ...(range ? { params: { range } } : {}),
     requestedById: actor.userId,
     idempotencyKey: request.idempotencyKey ?? null,
     priority: request.quality === 'preview' ? 1 : 10,

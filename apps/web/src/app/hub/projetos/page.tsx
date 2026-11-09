@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api, describeError, formatDateTime, useApi, useSelectedChannel } from '@/components/hub/api';
+import { NewLyricsProject } from '@/components/hub/lyrics/NewLyricsProject';
 
 type Project = { id: string; title: string; state: string; formats: string[]; updatedAt: string; legacyReadOnly: boolean; channel: { id: string; name: string } };
 type Channel = { id: string; name: string; series: Array<{ id: string; name: string }> };
@@ -13,6 +14,7 @@ export default function ProjectsPage() {
   const projects = useApi<{ projects: Project[] }>(`/api/v3/projects${channel ? `?channelId=${channel}` : ''}`);
   const channels = useApi<{ channels: Channel[] }>('/api/v3/channels');
   const [open, setOpen] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
   const [form, setForm] = useState({ channelId: '', seriesId: '', title: '', briefing: '', objective: '', targetDurationSec: '', formats: ['16:9'] as string[] });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -46,8 +48,13 @@ export default function ProjectsPage() {
     <div style={{ display: 'grid', gap: 16 }}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <h1>Projetos</h1>
-        <button className="primary" onClick={() => setOpen((v) => !v)} aria-expanded={open}>Novo projeto</button>
+        <div className="row" style={{ gap: 8 }}>
+          <button onClick={() => { setLyricsOpen((v) => !v); setOpen(false); }} aria-expanded={lyricsOpen}>Novo Reactive Lyrics</button>
+          <button className="primary" onClick={() => { setOpen((v) => !v); setLyricsOpen(false); }} aria-expanded={open}>Novo projeto</button>
+        </div>
       </div>
+
+      {lyricsOpen && channels.data && <NewLyricsProject channels={channels.data.channels} defaultChannelId={channel} />}
 
       {open && (
         <section className="card" style={{ display: 'grid', gap: 10 }} aria-label="Novo projeto">

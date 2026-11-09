@@ -65,15 +65,23 @@ export function applyPatch(
   const changed = new Set<string>();
 
   for (const op of patch.operations) {
-    if (op.op === 'setLock' && isAgent) {
+    if ((op.op === 'setLock' || op.op === 'validateLyrics') && isAgent) {
       return {
         ok: false,
-        error: { code: 'FORBIDDEN', message: 'O agente não pode bloquear ou desbloquear elementos.' },
+        error: {
+          code: 'FORBIDDEN',
+          message:
+            op.op === 'setLock'
+              ? 'O agente não pode bloquear ou desbloquear elementos.'
+              : 'Só uma pessoa valida ou desvalida linhas de letra.',
+        },
       };
     }
     // Checa bloqueio no estado corrente do rascunho: um setLock(false) humano
-    // anterior no mesmo patch libera as operações seguintes.
-    if (op.op !== 'setLock') {
+    // anterior no mesmo patch libera as operações seguintes. Desvalidar letra
+    // é o desbloqueio explícito das linhas.
+    const unlocks = op.op === 'setLock' || (op.op === 'validateLyrics' && !op.validated);
+    if (!unlocks) {
       const lockedTargets = operationTargets(draft, op).filter((t) => isLocked(draft, t));
       if (lockedTargets.length > 0) {
         return {

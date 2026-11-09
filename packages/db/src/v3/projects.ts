@@ -21,9 +21,12 @@ import {
   validateSemantics,
 } from '@editor-video/timeline';
 import { editorialHash } from '@editor-video/timeline/compile';
+import { validateTemplateParams } from '@editor-video/templates';
+import { cinematicParamIssues, parseBindingsParam, parseSectionsParam, type TemplatePreset } from '@editor-video/domain';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../client.js';
 import { authorizeChannel, authorizeProject, listWorkspaceIds, type Actor } from './access.js';
+import { findLyricsProject } from './lyrics.js';
 
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 
@@ -134,8 +137,38 @@ export async function getProject(actor: Actor, projectId: string) {
   });
   return {
     ...project,
+    lyrics: await findLyricsProject(projectId),
     timeline: project.currentRevision ? parseTimeline(project.currentRevision.documentJson) : null,
   };
+}
+
+/**
+ * Parâmetros de composição só entram validados contra as variáveis do
+ * template (e, no Reactive Lyrics, seções e vínculos parseáveis).
+ */
+export function assertCompositionParams(doc: TimelineDocument, itemIds: Iterable<string>): void {
+  const wanted = new Set(itemIds);
+  for (const track of doc.tracks) {
+    for (const item of track.items) {
+      if (item.kind !== 'composition' || !wanted.has(item.id)) continue;
+      // `$file:<caminho>` aponta um asset copiado para o sandbox; não é variável do template.
+      const variables = Object.fromEntries(Object.entries(item.params).filter(([k]) => !k.startsWith('$file:')));
+      const result = validateTemplateParams(item.templateId, variables);
+      if (!result.ok) {
+        throw new DomainError('INVALID', `Parâmetros inválidos em ${item.id}: ${result.issues.map((i) => `${i.id}: ${i.message}`).join('; ')}`, { issues: result.issues });
+      }
+      if (item.templateId === 'reactive-lyrics') {
+        try {
+          if (typeof item.params.sections === 'string' && item.params.sections.trim()) parseSectionsParam(item.params.sections);
+          parseBindingsParam(item.params.bindings, (result.values.preset as TemplatePreset) ?? 'neon');
+        } catch (err) {
+          throw new DomainError('INVALID', `Reactive Lyrics: ${(err as Error).message}`);
+        }
+        const cinematic = cinematicParamIssues(item.params);
+        if (cinematic.length > 0) throw new DomainError('INVALID', `Reactive Lyrics: ${cinematic.join('; ')}`, { issues: cinematic });
+      }
+    }
+  }
 }
 
 export async function listRevisions(actor: Actor, projectId: string) {
@@ -219,6 +252,10 @@ export async function commitPatch(actor: Actor, projectId: string, input: Commit
     const newRevisionId = randomUUID();
     const result = applyPatch(current, { expectedRevisionId: input.expectedRevisionId, operations: input.operations, origin }, { newRevisionId });
     if (!result.ok) throw new PatchRejectedError(result.error);
+    assertCompositionParams(result.document, [
+      ...result.changedIds,
+      ...input.operations.flatMap((op) => (op.op === 'insertClip' && op.item.kind === 'composition' ? [op.item.id] : [])),
+    ]);
     await writeRevision(tx, projectId, project.currentRevision.number + 1, result.document, input.summary ?? null);
     return { revisionId: newRevisionId, number: project.currentRevision.number + 1, changedIds: result.changedIds, document: result.document };
   });

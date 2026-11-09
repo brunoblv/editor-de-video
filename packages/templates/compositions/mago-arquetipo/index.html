@@ -1,0 +1,198 @@
+<!doctype html>
+<html
+  lang="pt-BR"
+  data-composition-variables='[
+    {"id":"eyebrow","type":"string","label":"Série","default":"Arquétipos","maxLength":40},
+    {"id":"hook","type":"string","label":"Abertura","default":"Tem gente que só mostra quem é quando as luzes se apagam.","maxLength":140},
+    {"id":"name","type":"string","label":"Arquétipo","default":"Pantera Negra","maxLength":28},
+    {"id":"epithet","type":"string","label":"Epíteto","default":"Senhora da noite e do silêncio","maxLength":60},
+    {"id":"lore1Title","type":"string","label":"Origem: título","default":"A marca escondida","maxLength":32},
+    {"id":"lore1Text","type":"string","label":"Origem: texto","default":"As manchas continuam ali, sob a sombra.","maxLength":190},
+    {"id":"lore2Title","type":"string","label":"Mito: título","default":"O sol da noite","maxLength":32},
+    {"id":"lore2Text","type":"string","label":"Mito: texto","default":"O jaguar atravessa o mundo de baixo até o amanhecer.","maxLength":190},
+    {"id":"gift1Title","type":"string","label":"Dádiva I","default":"Ver no escuro","maxLength":32},
+    {"id":"gift1Text","type":"string","label":"Dádiva I: texto","default":"Confiar no que você percebe quando ninguém mais está vendo.","maxLength":190},
+    {"id":"gift2Title","type":"string","label":"Dádiva II","default":"A paciência do bote","maxLength":32},
+    {"id":"gift2Text","type":"string","label":"Dádiva II: texto","default":"Guardar energia para o que realmente importa.","maxLength":190},
+    {"id":"gift3Title","type":"string","label":"Dádiva III","default":"Sozinha, não perdida","maxLength":32},
+    {"id":"gift3Text","type":"string","label":"Dádiva III: texto","default":"Seguir o próprio caminho sem precisar de plateia.","maxLength":190},
+    {"id":"shadowTitle","type":"string","label":"Sombra: título","default":"O lado sombrio","maxLength":32},
+    {"id":"shadowText","type":"string","label":"Sombra: texto","default":"O silêncio pode virar frieza, e a solidão, uma muralha.","maxLength":190},
+    {"id":"asks","type":"string","label":"Em troca, pede","default":"Que você pare de se diminuir para caber no conforto dos outros.","maxLength":190},
+    {"id":"closing","type":"string","label":"Fechamento","default":"Talvez seja hora de deixar a sua marca aparecer.","maxLength":120},
+    {"id":"cta","type":"string","label":"Chamada","default":"Siga para conhecer os outros arquétipos","maxLength":60},
+    {"id":"signature","type":"string","label":"Assinatura","default":"@o.magodameianoite","maxLength":40},
+    {"id":"hookSec","type":"number","label":"Abertura (s)","default":4,"min":1,"max":30,"step":0.01},
+    {"id":"titleSec","type":"number","label":"Nome (s)","default":4,"min":1,"max":30,"step":0.01},
+    {"id":"lore1Sec","type":"number","label":"Origem (s)","default":8,"min":1,"max":30,"step":0.01},
+    {"id":"lore2Sec","type":"number","label":"Mito (s)","default":8,"min":1,"max":30,"step":0.01},
+    {"id":"gift1Sec","type":"number","label":"Dádiva I (s)","default":7,"min":1,"max":30,"step":0.01},
+    {"id":"gift2Sec","type":"number","label":"Dádiva II (s)","default":7,"min":1,"max":30,"step":0.01},
+    {"id":"gift3Sec","type":"number","label":"Dádiva III (s)","default":7,"min":1,"max":30,"step":0.01},
+    {"id":"shadowSec","type":"number","label":"Sombra (s)","default":7,"min":1,"max":30,"step":0.01},
+    {"id":"asksSec","type":"number","label":"Em troca (s)","default":7,"min":1,"max":30,"step":0.01},
+    {"id":"artAspect","type":"number","label":"Arte: altura / largura","default":1.777,"min":0.3,"max":3,"step":0.001},
+    {"id":"eyeGlow","type":"boolean","label":"Olhos acesos","default":true},
+    {"id":"eyeLX","type":"number","label":"Olho esq. X (%)","default":38.23,"min":0,"max":100,"step":0.01},
+    {"id":"eyeLY","type":"number","label":"Olho esq. Y (%)","default":35.76,"min":0,"max":100,"step":0.01},
+    {"id":"eyeRX","type":"number","label":"Olho dir. X (%)","default":65.45,"min":0,"max":100,"step":0.01},
+    {"id":"eyeRY","type":"number","label":"Olho dir. Y (%)","default":35.65,"min":0,"max":100,"step":0.01},
+    {"id":"accent","type":"color","label":"Destaque","default":"#A855F7"},
+    {"id":"eyeColor","type":"color","label":"Brilho dos olhos","default":"#FFC94D"},
+    {"id":"background","type":"color","label":"Fundo","default":"#08050D"},
+    {"id":"textColor","type":"color","label":"Texto","default":"#F4EFF8"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=__WIDTH__, height=__HEIGHT__" />
+    <title>Mago da Meia-Noite: arquétipo</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: var(--background); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 24%, rgba(109,40,168,0.42), transparent 62%), var(--background); }
+      .clip { position: absolute; inset: 0; box-sizing: border-box; }
+      .star { position: absolute; width: 0.45vmin; height: 0.45vmin; border-radius: 50%; background: #D8B4FE; }
+      #moon { position: absolute; right: 9%; top: 7%; width: 7vmin; height: 7vmin; border-radius: 50%; box-shadow: inset -1.8vmin 0.7vmin 0 0 var(--accent); filter: drop-shadow(0 0 2vmin rgba(168,85,247,0.55)); transform: rotate(-18deg); }
+
+      /* A arte (PNG recortado) surge da noite; a máscara a funde ao céu antes do texto. */
+      #frame { -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 40%, transparent 57%); mask-image: linear-gradient(to bottom, #000 0, #000 40%, transparent 57%); }
+      #beast { position: absolute; }
+      #art { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #sheen { position: absolute; inset: 0; -webkit-mask-image: url(assets/arquetipo.png); mask-image: url(assets/arquetipo.png); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; background: linear-gradient(100deg, transparent 42%, rgba(216,180,254,0.42) 50%, transparent 58%); background-size: 300% 100%; background-position: 100% 0; mix-blend-mode: screen; opacity: 0; }
+      .eye { position: absolute; width: 11%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--eyeColor) 85%, white) 0, color-mix(in srgb, var(--eyeColor) 45%, transparent) 22%, transparent 62%); mix-blend-mode: screen; }
+
+      #eyebrow { position: absolute; left: 0; right: 0; top: 4%; margin: 0; text-align: center; color: var(--accent); font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 2.8vmin; letter-spacing: 0.26em; text-transform: uppercase; }
+      .scene { position: absolute; left: 9%; right: 9%; top: 53%; bottom: 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0; }
+      .scene h1 { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-weight: 500; font-size: 6.6vmin; line-height: 1.24; }
+      .scene h2 { margin: 0 0 2.6vmin; color: #D8B4FE; font-family: Karla, 'DejaVu Sans', sans-serif; font-weight: 500; font-size: 3.2vmin; letter-spacing: 0.22em; text-transform: uppercase; }
+      .scene h3 { margin: 0 0 2.4vmin; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-weight: 600; font-size: 6vmin; line-height: 1.15; }
+      .scene p { margin: 0; color: var(--textColor); font-family: Domine, 'DejaVu Serif', Georgia, serif; font-size: 4.5vmin; line-height: 1.42; }
+      .scene .rule { width: 14vmin; height: 2px; margin: 0 0 3.4vmin; background: var(--accent); }
+      #name { font-size: 10.5vmin; line-height: 1.05; letter-spacing: 0.01em; }
+      #epithet { margin-top: 2.4vmin; color: #D8B4FE; font-style: italic; font-size: 4.8vmin; }
+      #shadowScene p { color: #CFC4D8; }
+      #cta { margin-top: 4.2vmin; color: #D8B4FE; font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 3.6vmin; }
+      #signature { position: absolute; left: 0; right: 0; bottom: 5%; margin: 0; text-align: center; color: #A99EB0; font-family: Karla, 'DejaVu Sans', sans-serif; font-size: 2.8vmin; letter-spacing: 0.08em; }
+
+      /* Horizontal: arte à esquerda, texto à direita. */
+      @media (min-aspect-ratio: 1/1) {
+        #frame { -webkit-mask-image: linear-gradient(to right, #000 0, #000 40%, transparent 56%); mask-image: linear-gradient(to right, #000 0, #000 40%, transparent 56%); }
+        .scene { left: 52%; right: 6%; top: 12%; bottom: 12%; }
+        #eyebrow { left: 52%; right: 6%; top: 7%; }
+        #signature { left: 52%; right: 6%; }
+        #moon { right: 4%; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
+      <section id="sky" class="clip" data-start="0" data-duration="__DURATION__"><div id="moon"></div></section>
+      <section id="frame" class="clip" data-start="0" data-duration="__DURATION__">
+        <div id="beast">
+          <img id="art" src="assets/arquetipo.png" alt="" />
+          <div id="sheen"></div>
+          <div id="eyeL" class="eye"></div>
+          <div id="eyeR" class="eye"></div>
+        </div>
+      </section>
+      <section id="copy" class="clip" data-start="0" data-duration="__DURATION__">
+        <p id="eyebrow" data-var-text="eyebrow">Arquétipos</p>
+        <div id="hookScene" class="scene"><h1 data-var-text="hook">Tem gente que só mostra quem é quando as luzes se apagam.</h1></div>
+        <div id="titleScene" class="scene"><h2>Arquétipo</h2><h1 id="name" data-var-text="name">Pantera Negra</h1><p id="epithet" data-var-text="epithet">Senhora da noite e do silêncio</p></div>
+        <div id="lore1Scene" class="scene"><h2 data-var-text="lore1Title">A marca escondida</h2><div class="rule"></div><p data-var-text="lore1Text">As manchas continuam ali, sob a sombra.</p></div>
+        <div id="lore2Scene" class="scene"><h2 data-var-text="lore2Title">O sol da noite</h2><div class="rule"></div><p data-var-text="lore2Text">O jaguar atravessa o mundo de baixo até o amanhecer.</p></div>
+        <div id="gift1Scene" class="scene"><h2>Pode trazer · I</h2><h3 data-var-text="gift1Title">Ver no escuro</h3><p data-var-text="gift1Text">Confiar no que você percebe quando ninguém mais está vendo.</p></div>
+        <div id="gift2Scene" class="scene"><h2>Pode trazer · II</h2><h3 data-var-text="gift2Title">A paciência do bote</h3><p data-var-text="gift2Text">Guardar energia para o que realmente importa.</p></div>
+        <div id="gift3Scene" class="scene"><h2>Pode trazer · III</h2><h3 data-var-text="gift3Title">Sozinha, não perdida</h3><p data-var-text="gift3Text">Seguir o próprio caminho sem precisar de plateia.</p></div>
+        <div id="shadowScene" class="scene"><h2 data-var-text="shadowTitle">O lado sombrio</h2><div class="rule"></div><p data-var-text="shadowText">O silêncio pode virar frieza, e a solidão, uma muralha.</p></div>
+        <div id="asksScene" class="scene"><h2>Em troca, pede</h2><div class="rule"></div><p data-var-text="asks">Que você pare de se diminuir para caber no conforto dos outros.</p></div>
+        <div id="closeScene" class="scene"><h1 data-var-text="closing">Talvez seja hora de deixar a sua marca aparecer.</h1><div id="cta" data-var-text="cta">Siga para conhecer os outros arquétipos</div></div>
+        <p id="signature" data-var-text="signature">@o.magodameianoite</p>
+      </section>
+    </div>
+    <script>
+      const vars = window.__hyperframes.getVariables();
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      const landscape = W > H;
+      const sky = document.getElementById('sky');
+
+      // Estrelas em posições fixas: o render precisa ser determinístico (sem Math.random).
+      const stars = [];
+      for (let i = 0; i < 32; i += 1) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = `${(i * 37.7) % 100}%`;
+        star.style.top = `${(i * 61.3) % 100}%`;
+        star.style.opacity = String(0.2 + ((i * 7) % 5) / 10);
+        sky.appendChild(star);
+        stars.push(star);
+      }
+
+      // Enquadra a arte pelos olhos: no vertical ficam a 27% da altura; no horizontal, no centro da metade esquerda.
+      const eyeX = (vars.eyeLX + vars.eyeRX) / 200;
+      const eyeY = (vars.eyeLY + vars.eyeRY) / 200;
+      const artW = landscape ? Math.min(W * 0.62, (H * 1.5) / vars.artAspect) : W * 1.18;
+      const artH = artW * vars.artAspect;
+      const beast = document.getElementById('beast');
+      Object.assign(beast.style, {
+        width: `${artW}px`,
+        height: `${artH}px`,
+        left: `${(landscape ? W * 0.26 : W * 0.5) - eyeX * artW}px`,
+        top: `${(landscape ? H * 0.4 : H * 0.27) - eyeY * artH}px`,
+      });
+      for (const [id, x, y] of [['eyeL', vars.eyeLX, vars.eyeLY], ['eyeR', vars.eyeRX, vars.eyeRY]]) {
+        const eye = document.getElementById(id);
+        eye.style.left = `${x}%`;
+        eye.style.top = `${y}%`;
+        if (!vars.eyeGlow) eye.style.display = 'none';
+      }
+
+      // Cada cena começa onde a anterior termina; o fechamento ocupa o resto da duração.
+      const sceneIds = ['#hookScene', '#titleScene', '#lore1Scene', '#lore2Scene', '#gift1Scene', '#gift2Scene', '#gift3Scene', '#shadowScene', '#asksScene', '#closeScene'];
+      const lengths = [vars.hookSec, vars.titleSec, vars.lore1Sec, vars.lore2Sec, vars.gift1Sec, vars.gift2Sec, vars.gift3Sec, vars.shadowSec, vars.asksSec];
+      const starts = [0];
+      for (const length of lengths) starts.push(starts[starts.length - 1] + length);
+      const [, TITLE, LORE1, , GIFT1, , , SHADOW, ASKS, CLOSE] = starts;
+      const duration = Number(document.getElementById('root').dataset.duration);
+      const fade = 0.45;
+
+      const hidden = 'brightness(0) drop-shadow(0 0 0px rgba(168,85,247,0))';
+      const lit = 'brightness(1) drop-shadow(0 0 28px rgba(168,85,247,0.5))';
+      const dim = 'brightness(0.32) drop-shadow(0 0 10px rgba(168,85,247,0.15))';
+      const bright = 'brightness(1.08) drop-shadow(0 0 40px rgba(168,85,247,0.7))';
+      gsap.set('#art', { filter: hidden });
+      gsap.set('.eye', { opacity: 0, scale: 0.6 });
+      gsap.set('#beast', { transformOrigin: `${eyeX * 100}% ${eyeY * 100}%` });
+
+      const tl = gsap.timeline({ paused: true });
+      tl.from(stars, { opacity: 0, duration: 1.4, stagger: 0.03, ease: 'power1.out' }, 0)
+        .from('#moon', { opacity: 0, duration: 1.2, ease: 'power1.out' }, 0.2)
+        .from('#eyebrow', { opacity: 0, duration: 0.8 }, 0.2)
+        // Na abertura, só os olhos acendem na escuridão.
+        .to('.eye', { opacity: 1, scale: 1, duration: 1.1, ease: 'power2.out' }, 0.5)
+        .fromTo('#beast', { scale: 1.12 }, { scale: 1, duration: duration, ease: 'none' }, 0)
+        // Ao dizer o nome, a pantera sai da sombra.
+        .to('#art', { filter: lit, duration: 1.8, ease: 'power2.inOut' }, TITLE)
+        .to('.eye', { opacity: 0.55, duration: 1.4, ease: 'power1.inOut' }, TITLE + 0.4)
+        // As manchas escondidas: uma luz atravessa a pelagem.
+        .to('#sheen', { opacity: 1, duration: 0.4 }, LORE1 + 0.3)
+        .to('#sheen', { backgroundPosition: '0% 0', duration: 2.8, ease: 'sine.inOut' }, LORE1 + 0.3)
+        .to('#sheen', { opacity: 0, duration: 0.5 }, LORE1 + 2.8)
+        // Ver no escuro: os olhos voltam a arder.
+        .to('.eye', { opacity: 1, scale: 1.25, duration: 0.6, ease: 'power2.out' }, GIFT1 + 0.2)
+        .to('.eye', { opacity: 0.55, scale: 1, duration: 1.2, ease: 'power1.inOut' }, GIFT1 + 2)
+        // A sombra apaga a pantera; o pedido a acende mais forte.
+        .to('#art', { filter: dim, duration: 1.2, ease: 'power2.inOut' }, SHADOW)
+        .to('.eye', { opacity: 0.85, duration: 1.2 }, SHADOW)
+        .to('#art', { filter: bright, duration: 1.4, ease: 'power2.inOut' }, ASKS)
+        .to('.eye', { opacity: 1, scale: 1.15, duration: 1, ease: 'power2.out' }, CLOSE);
+      sceneIds.forEach((id, i) => {
+        tl.fromTo(id, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: fade, ease: 'power2.out' }, starts[i]);
+        if (i < sceneIds.length - 1) tl.to(id, { opacity: 0, y: -16, duration: fade * 0.7, ease: 'power2.in' }, starts[i + 1] - fade * 0.7);
+      });
+      window.__timelines['main'] = tl;
+    </script>
+  </body>
+</html>

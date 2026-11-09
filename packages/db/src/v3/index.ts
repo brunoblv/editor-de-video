@@ -11,4 +11,5 @@ export * from './jobs.js';
 export * from './review.js';
 export * from './social-posts.js';
 export * from './agent-runs.js';
+export * from './lyrics.js';
 export { loadLegacySnapshot, findMissingFiles, runMigration } from './migrate-legacy.js';

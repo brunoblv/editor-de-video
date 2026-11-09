@@ -6,6 +6,9 @@
 import { z } from 'zod';
 import {
   audioSchema,
+  captionWordSchema,
+  LYRIC_SOURCES,
+  LYRIC_STATUSES,
   patchShape,
   itemSchema,
   textStyleSchema,
@@ -90,6 +93,39 @@ export const operationSchema = z.discriminatedUnion('op', [
     trackId: id.optional(),
     locked: z.boolean(),
   }),
+  z.object({
+    op: z.literal('setLyricLine'),
+    /**
+     * Texto e tempos de uma linha de letra numa trilha 'lyrics', de uma vez.
+     * Palavras em frames absolutos da timeline; lista vazia = modo linha.
+     * Nunca marca VALIDATED (isso é validateLyrics, só para pessoas).
+     */
+    itemId: id,
+    text: z.string().max(500).optional(),
+    timelineStart: nonNegInt.optional(),
+    duration: z.number().int().positive().optional(),
+    words: z.array(captionWordSchema).max(200).optional(),
+    status: z.enum(LYRIC_STATUSES).exclude(['VALIDATED']).optional(),
+    source: z.enum(LYRIC_SOURCES).optional(),
+  }),
+  z.object({
+    op: z.literal('validateLyrics'),
+    /** Validar bloqueia a linha; desvalidar a desbloqueia e volta a SUGGESTED. */
+    itemIds: z.array(id).min(1).max(500),
+    validated: z.boolean(),
+  }),
+  z.object({
+    op: z.literal('shiftLyrics'),
+    /** Deslocamento global (offset) de todas as linhas e palavras da trilha. */
+    trackId: id,
+    frames: z.number().int(),
+  }),
+  z.object({
+    op: z.literal('updateCompositionParams'),
+    itemId: id,
+    /** Mescla sobre os parâmetros atuais (`null` remove a chave); o chamador valida contra o template. */
+    params: z.record(z.string(), z.unknown()),
+  }),
 ]);
 
 export type TimelineOperation = z.infer<typeof operationSchema>;
@@ -135,6 +171,13 @@ export function operationTargets(doc: TimelineDocument, op: TimelineOperation): 
       return [...op.edits.map((e) => e.itemId), ...(op.style ? [op.style.trackId] : [])];
     case 'setLock':
       return [op.itemId, op.trackId].filter((v): v is string => Boolean(v));
+    case 'validateLyrics':
+      return op.itemIds;
+    case 'shiftLyrics': {
+      // Deslocar a trilha mexe em todas as linhas: uma validada (bloqueada) impede.
+      const track = doc.tracks.find((t) => t.id === op.trackId);
+      return [op.trackId, ...(track?.items.map((i) => i.id) ?? [])];
+    }
     default:
       return [op.itemId];
   }
@@ -196,6 +239,8 @@ export function applyOperation(draft: TimelineDocument, op: TimelineOperation): 
     }
     case 'moveClip': {
       const located = locateItem(draft, op.itemId);
+      // Palavras de legenda estão em frames absolutos: acompanham o item.
+      if (located.item.kind === 'caption') shiftWords(located.item, op.timelineStart - located.item.timelineStart);
       located.item.timelineStart = op.timelineStart;
       if (op.trackId && op.trackId !== located.track.id) {
         const target = findTrack(draft, op.trackId);
@@ -341,7 +386,84 @@ export function applyOperation(draft: TimelineDocument, op: TimelineOperation): 
       if (op.itemId) locateItem(draft, op.itemId).item.locked = op.locked;
       return;
     }
+    case 'setLyricLine': {
+      const item = lyricItem(draft, op.itemId);
+      if (op.text !== undefined) item.text = op.text;
+      if (op.timelineStart !== undefined) item.timelineStart = op.timelineStart;
+      if (op.duration !== undefined) item.duration = op.duration;
+      if (op.words !== undefined) {
+        for (let i = 1; i < op.words.length; i += 1) {
+          if (op.words[i]!.start < op.words[i - 1]!.start) {
+            throw new OperationError('INVALID', `Palavras fora de ordem na linha ${item.id}`, item.id);
+          }
+        }
+        item.words = structuredClone(op.words);
+      } else if (op.text !== undefined && item.words.map((w) => w.text).join(' ') !== op.text.replace(/\s+/g, ' ').trim()) {
+        // Texto mudou e as palavras não foram reenviadas: os tempos antigos não valem mais.
+        item.words = [];
+      }
+      const lyric = item.lyric!;
+      if (op.source !== undefined) lyric.source = op.source;
+      if (op.status !== undefined) lyric.status = op.status;
+      else if (op.timelineStart !== undefined || op.duration !== undefined || op.words !== undefined) {
+        // Ajuste humano de tempo deixa a linha sincronizada, mas ainda não validada.
+        if (lyric.status === 'UNALIGNED' || lyric.status === 'LOW_CONFIDENCE') lyric.status = 'SUGGESTED';
+      }
+      return;
+    }
+    case 'validateLyrics': {
+      for (const itemId of op.itemIds) {
+        const item = lyricItem(draft, itemId);
+        if (op.validated && item.lyric!.status === 'UNALIGNED') {
+          throw new OperationError('INVALID', `A linha "${item.text}" ainda não tem tempo; sincronize antes de validar.`, item.id);
+        }
+        item.lyric!.status = op.validated ? 'VALIDATED' : 'SUGGESTED';
+        item.locked = op.validated;
+      }
+      return;
+    }
+    case 'shiftLyrics': {
+      const track = findTrack(draft, op.trackId);
+      if (track.role !== 'lyrics') throw new OperationError('INVALID', `${track.id} não é trilha de letra`, track.id);
+      for (const item of track.items) {
+        if (item.kind !== 'caption') continue;
+        if (item.timelineStart + op.frames < 0) {
+          throw new OperationError('INVALID', `O deslocamento levaria "${item.text}" para antes do início`, item.id);
+        }
+        item.timelineStart += op.frames;
+        shiftWords(item, op.frames);
+      }
+      return;
+    }
+    case 'updateCompositionParams': {
+      const { item } = locateItem(draft, op.itemId);
+      if (item.kind !== 'composition') throw new OperationError('INVALID', `${item.id} não é composição`, item.id);
+      const next: Record<string, unknown> = { ...item.params };
+      // `null` remove a chave (ex.: o `$file:` de uma cena retirada).
+      for (const [key, value] of Object.entries(structuredClone(op.params))) {
+        if (value === null) delete next[key];
+        else next[key] = value;
+      }
+      item.params = next;
+      return;
+    }
   }
+}
+
+function shiftWords(item: Extract<TimelineItem, { kind: 'caption' }>, delta: number): void {
+  if (delta === 0) return;
+  for (const w of item.words) {
+    w.start += delta;
+    w.end += delta;
+  }
+}
+
+function lyricItem(draft: TimelineDocument, itemId: string): Extract<TimelineItem, { kind: 'caption' }> {
+  const { track, item } = locateItem(draft, itemId);
+  if (track.role !== 'lyrics' || item.kind !== 'caption' || !item.lyric) {
+    throw new OperationError('INVALID', `${itemId} não é uma linha de letra`, itemId);
+  }
+  return item;
 }
 
 /**

@@ -2,7 +2,7 @@
 <html
   lang="pt-BR"
   data-composition-variables='[
-    {"id":"preset","type":"enum","label":"Preset","default":"neon","options":[{"value":"neon","label":"Neon Cinematic"},{"value":"minimal","label":"Minimal Lyrics"},{"value":"glitch_rock","label":"Glitch Rock"}]},
+    {"id":"preset","type":"enum","label":"Preset","default":"neon","options":[{"value":"neon","label":"Neon Cinematic"},{"value":"minimal","label":"Minimal Lyrics"},{"value":"glitch_rock","label":"Glitch Rock"},{"value":"cinematic","label":"Cinematic Atmospheric"}]},
     {"id":"highlightMode","type":"enum","label":"Destaque","default":"karaoke","options":[{"value":"karaoke","label":"Palavra a palavra"},{"value":"line","label":"Linha"}]},
     {"id":"intensity","type":"number","label":"Intensidade","default":70,"min":0,"max":100,"step":1},
     {"id":"reducedMotion","type":"boolean","label":"Movimento reduzido","default":false},
@@ -12,7 +12,26 @@
     {"id":"accent","type":"color","label":"Destaque","default":"#7C5CFF"},
     {"id":"background","type":"color","label":"Fundo","default":"#05040E"},
     {"id":"textColor","type":"color","label":"Texto","default":"#F2F0FF"},
-    {"id":"credit","type":"string","label":"Crédito (artista — faixa)","default":"","maxLength":80}
+    {"id":"credit","type":"string","label":"Crédito (artista — faixa)","default":"","maxLength":80},
+    {"id":"sections","type":"string","label":"Seções (início-fim:tipo, ms da música)","default":"","maxLength":2000},
+    {"id":"bindings","type":"string","label":"Vínculos áudio → efeito (JSON; vazio = do preset)","default":"","maxLength":4000},
+    {"id":"textAudioReactivity","type":"number","label":"Reação da letra ao som","default":100,"min":0,"max":100,"step":1},
+    {"id":"backgroundAudioReactivity","type":"number","label":"Reação do cenário ao som","default":100,"min":0,"max":100,"step":1},
+    {"id":"lyricDisplayMode","type":"enum","label":"Exibição da letra (Cinematic)","default":"hybrid","options":[{"value":"word","label":"Palavra"},{"value":"phrase","label":"Frase"},{"value":"hybrid","label":"Híbrido"}]},
+    {"id":"maxWordsPerGroup","type":"number","label":"Palavras por fragmento","default":4,"min":1,"max":8,"step":1},
+    {"id":"maxLines","type":"number","label":"Linhas por fragmento","default":3,"min":1,"max":3,"step":1},
+    {"id":"uppercase","type":"boolean","label":"Maiúsculas","default":true},
+    {"id":"emphasisWords","type":"string","label":"Palavras de destaque (separadas por vírgula)","default":"","maxLength":1000},
+    {"id":"autoEmphasis","type":"boolean","label":"Destacar notas sustentadas","default":true},
+    {"id":"emphasisScale","type":"number","label":"Escala do destaque","default":1.4,"min":1,"max":2,"step":0.05},
+    {"id":"textTransition","type":"enum","label":"Transição da letra","default":"blur","options":[{"value":"fade","label":"Fade"},{"value":"scale","label":"Escala"},{"value":"slide","label":"Deslize"},{"value":"blur","label":"Desfoque"}]},
+    {"id":"textTransitionFrames","type":"number","label":"Duração da transição (frames)","default":8,"min":2,"max":30,"step":1},
+    {"id":"sceneChangePolicy","type":"enum","label":"Troca de cena","default":"by_phrase","options":[{"value":"by_phrase","label":"Por frase"},{"value":"by_section","label":"Por seção"},{"value":"manual","label":"Manual"},{"value":"ai_suggested","label":"Sugerida pelo mapa musical"}]},
+    {"id":"minSceneSec","type":"number","label":"Duração mínima da cena (s)","default":6,"min":2,"max":60,"step":0.5},
+    {"id":"sceneTransition","type":"enum","label":"Passagem de cena","default":"crossfade","options":[{"value":"crossfade","label":"Dissolve"},{"value":"cut","label":"Corte"}]},
+    {"id":"backgroundMotion","type":"enum","label":"Movimento do cenário","default":"slow_zoom","options":[{"value":"none","label":"Nenhum"},{"value":"slow_zoom","label":"Zoom lento"},{"value":"pan","label":"Pan"},{"value":"parallax_if_available","label":"Parallax (se disponível)"}]},
+    {"id":"contrastOverlayStrength","type":"number","label":"Vinheta de contraste","default":45,"min":0,"max":100,"step":1},
+    {"id":"scenes","type":"string","label":"Cenas (JSON)","default":"","maxLength":6000}
   ]'
 >
   <head>
@@ -59,12 +78,30 @@
       .p-glitch_rock .w[data-s='sung'] { opacity: 1; }
       .p-glitch_rock #bg { background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 5px), radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 65%); }
       .p-glitch_rock .bar { background: linear-gradient(90deg, transparent, rgba(5,217,232,0.55), rgba(255,42,85,0.55), transparent); }
+
+      /* Cinematic Atmospheric: cenário de tela inteira, letra branca em fragmentos curtos, sem tarjas. */
+      #bgwrap { position: absolute; inset: 0; transform-origin: 50% 50%; }
+      #scenes { position: absolute; inset: 0; }
+      #vignette { position: absolute; inset: 0; pointer-events: none; }
+      .scene { position: absolute; inset: 0; overflow: hidden; visibility: hidden; }
+      .scene-layer { position: absolute; inset: -4%; transform-origin: 50% 50%; }
+      .scene-layer img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .depth { position: absolute; }
+      .p-cinematic #bg { background: var(--background); }
+      .group { position: absolute; left: 0; right: 0; margin: 0; text-align: center; visibility: hidden; color: var(--textColor); font-family: Montserrat, Inter, sans-serif; font-weight: 600; letter-spacing: 0.035em; }
+      .upper .group { text-transform: uppercase; }
+      .row { display: block; width: max-content; max-width: none; margin: 0 auto; line-height: 1.1; white-space: nowrap; }
+      .cw { display: inline-block; white-space: pre; visibility: hidden; text-shadow: 0 0.3vmin 1.8vmin rgba(0,0,0,0.6), 0 0 calc(var(--glow, 0) * 2.2vmin) rgba(255,255,255,0.5); }
+      .cw.em { font-weight: 800; letter-spacing: 0.06em; }
+      .cw[data-s='active'] { text-shadow: 0 0.3vmin 1.8vmin rgba(0,0,0,0.6), 0 0 calc(0.7vmin + var(--glow, 0) * 2.8vmin) color-mix(in srgb, var(--accent) 50%, white); }
+      .p-cinematic .particle { width: 0.55vmin; height: 0.55vmin; margin: -0.27vmin; background: rgba(255,255,255,0.9); box-shadow: 0 0 1vmin rgba(255,255,255,0.55); }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-width="__WIDTH__" data-height="__HEIGHT__" data-duration="__DURATION__">
       <section id="scene" class="clip" data-start="0" data-duration="__DURATION__">
-        <div id="bg"></div>
+        <div id="bgwrap"><div id="bg"></div><div id="scenes"></div></div>
+        <div id="vignette"></div>
         <div id="fx"></div>
         <div id="box"><div id="stage"></div></div>
         <div id="progress"></div>
@@ -82,9 +119,6 @@
       const preset = vars.preset;
       const reduced = vars.reducedMotion;
       const karaoke = vars.highlightMode === 'karaoke';
-      const k = Math.max(0, Math.min(100, vars.intensity)) / 100;
-      // Intervalo mínimo entre efeitos de impacto: 3 por segundo com limite de flashes (WCAG 2.3.1).
-      const minEventGapMs = vars.limitFlashes ? 334 : 120;
       root.classList.add(`p-${preset}`);
       if (karaoke) root.classList.add('karaoke');
 
@@ -117,10 +151,17 @@
       const progress = document.getElementById('progress');
       Object.assign(progress.style, { left: `${safe.left * W}px`, width: `${boxW}px`, bottom: `${(safe.bottom - 0.02) * H}px` });
 
-      // ---------------------------------------------------------------- letra
       const stage = document.getElementById('stage');
-      const baseFont = (portrait ? 6.4 : 7.2) * vmin * vars.fontScale * (preset === 'glitch_rock' ? 1.35 : 1);
       const anchor = { upper: 0.22, center: 0.5, lower: 0.78 }[vars.textPosition];
+      const tl = gsap.timeline({ paused: true });
+      // Tempos da letra já caem em frames exatos; meio milissegundo antes evita perder o frame por arredondamento.
+      const at = (ms) => Math.max(0, ms / 1000 - 0.0005);
+      const fpsNum = data.fps.num / data.fps.den;
+      const cinematic = preset === 'cinematic' && data.cinematic ? data.cinematic : null;
+
+      // ------------------------------------------- letra (Neon, Minimal, Glitch)
+      if (!cinematic) {
+      const baseFont = (portrait ? 6.4 : 7.2) * vmin * vars.fontScale * (preset === 'glitch_rock' ? 1.35 : 1);
       const holdMs = 300;
       const lines = data.lines.map((line, index) => {
         const el = document.createElement('p');
@@ -168,7 +209,6 @@
         line.el.style.top = `${Math.max(0, Math.min(boxH - line.el.offsetHeight, center * boxH - line.el.offsetHeight / 2))}px`;
       });
 
-      const tl = gsap.timeline({ paused: true });
       const entry = reduced ? 0.25 : { neon: 0.35, minimal: 0.3, glitch_rock: 0.16 }[preset];
       const exit = reduced ? 0.2 : { neon: 0.3, minimal: 0.25, glitch_rock: 0.12 }[preset];
       const byslot = [lines.filter((l) => l.slot === 0), lines.filter((l) => l.slot === 1)];
@@ -201,171 +241,288 @@
           if (karaoke && line.words) {
             line.spans.forEach((span, j) => {
               const w = line.words[j];
-              tl.set(span, { attr: { 'data-s': 'active' } }, w.startMs / 1000);
-              tl.set(span, { attr: { 'data-s': 'sung' } }, w.endMs / 1000);
+              tl.set(span, { attr: { 'data-s': 'active' } }, at(w.startMs));
+              tl.set(span, { attr: { 'data-s': 'sung' } }, at(w.endMs));
             });
           } else {
             // Sem tempo por palavra: a linha inteira acende no intervalo dela (modo linha).
             line.spans.forEach((span) => {
-              tl.set(span, { attr: { 'data-s': 'active' } }, start);
-              tl.set(span, { attr: { 'data-s': 'sung' } }, line.endMs / 1000);
+              tl.set(span, { attr: { 'data-s': 'active' } }, at(line.startMs));
+              tl.set(span, { attr: { 'data-s': 'sung' } }, at(line.endMs));
             });
           }
         });
       });
+      }
+
+      // ------------------------------------------------- Cinematic Atmospheric
+      // Fragmentos e cenas vêm prontos de @editor-video/domain (groupLyricWords, planScenes).
+      const scenesEl = document.getElementById('scenes');
+      if (cinematic) {
+        if (vars.uppercase) root.classList.add('upper');
+        const sceneTransition = vars.sceneTransition === 'cut' ? 0 : 0.8;
+        const motion = reduced ? 'none' : vars.backgroundMotion;
+
+        // Fundos procedurais (só CSS, sem mídia de terceiros), cada camada com profundidade para o parallax.
+        const layer = (parent, css, depth) => {
+          const d = document.createElement('div');
+          d.className = 'depth';
+          d.dataset.depth = String(depth);
+          Object.assign(d.style, { inset: '0' }, css);
+          parent.appendChild(d);
+          return d;
+        };
+        const dots = (parent, r, count, color, size, area, depth) => {
+          const holder = layer(parent, {}, depth);
+          for (let i = 0; i < count; i += 1) {
+            const s = (size[0] + r() * (size[1] - size[0])) * vmin;
+            const dot = document.createElement('div');
+            Object.assign(dot.style, { position: 'absolute', left: `${(r() * 100).toFixed(2)}%`, top: `${(area[0] + r() * (area[1] - area[0])) * 100}%`, width: `${s}px`, height: `${s}px`, borderRadius: '50%', background: color, opacity: String(0.35 + r() * 0.65) });
+            holder.appendChild(dot);
+          }
+        };
+        const ATMOSPHERES = {
+          ocean(el, r) {
+            layer(el, { background: 'linear-gradient(180deg,#01060d 0%,#04182a 44%,#0b3a55 60%,#03121f 100%)' }, 0);
+            layer(el, { background: 'radial-gradient(ellipse 80% 14% at 50% 58%, rgba(127,214,255,0.38), transparent 72%)' }, 0.3);
+            layer(el, { top: '58%', background: 'repeating-linear-gradient(180deg, rgba(160,220,255,0.07) 0 2px, transparent 2px 16px)' }, 0.6);
+            layer(el, { top: '70%', background: `radial-gradient(ellipse 30% 22% at ${20 + r() * 15}% 100%, #010307 60%, transparent 62%), radial-gradient(ellipse 22% 16% at ${70 + r() * 15}% 100%, #010307 60%, transparent 62%)` }, 1);
+          },
+          rose_moon(el, r) {
+            layer(el, { background: 'linear-gradient(180deg,#07030d 0%,#1d0820 48%,#2a0b25 60%,#090309 100%)' }, 0);
+            dots(el, r, 40, '#ffe6f1', [0.1, 0.3], [0, 0.5], 0.1);
+            const m = 24 * vmin;
+            layer(el, { inset: 'auto', left: `calc(50% - ${m / 2}px)`, top: `calc(26% - ${m / 2}px)`, width: `${m}px`, height: `${m}px`, borderRadius: '50%', background: 'radial-gradient(circle at 40% 38%, #ffe0ec, #ff7fb0 58%, #b8336a)', boxShadow: '0 0 12vmin 3vmin rgba(255,111,168,0.42)' }, 0.25);
+            // Reflexo na água: elipse suave cortada por faixas, sem borda dura.
+            layer(el, { top: '60%', background: 'radial-gradient(ellipse 14% 70% at 50% 0%, rgba(255,127,176,0.42), rgba(255,127,176,0.12) 55%, transparent 100%)', filter: 'blur(1.2vmin)' }, 0.6);
+            layer(el, { top: '60%', background: 'repeating-linear-gradient(180deg, rgba(7,3,13,0.55) 0 3px, transparent 3px 11px)' }, 0.6);
+            layer(el, { top: '60%', background: 'repeating-linear-gradient(180deg, rgba(255,160,200,0.05) 0 2px, transparent 2px 13px)' }, 0.8);
+          },
+          fog_city(el, r) {
+            layer(el, { background: 'linear-gradient(180deg,#0b1018 0%,#1b2533 55%,#2a3442 100%)' }, 0);
+            const city = layer(el, {}, 0.5);
+            let x = -2;
+            while (x < 102) {
+              const w = 4 + r() * 9;
+              const h = 18 + r() * 34;
+              const b = document.createElement('div');
+              Object.assign(b.style, { position: 'absolute', left: `${x}%`, width: `${w}%`, bottom: '0', height: `${h}%`, background: '#090d13' });
+              city.appendChild(b);
+              x += w + r() * 1.5;
+            }
+            dots(el, r, 26, '#ffcf7a', [0.18, 0.32], [0.58, 0.95], 0.5);
+            layer(el, { background: 'linear-gradient(180deg, transparent 35%, rgba(180,195,215,0.22) 55%, transparent 75%), linear-gradient(180deg, transparent 70%, rgba(180,195,215,0.3) 92%)' }, 0.9);
+          },
+          cosmos(el, r) {
+            layer(el, { background: 'radial-gradient(ellipse at 30% 20%, #1a0f3a, #05030f 70%)' }, 0);
+            dots(el, r, 90, '#ffffff', [0.12, 0.42], [0, 1], 0.15);
+            layer(el, { background: 'radial-gradient(ellipse 45% 30% at 25% 60%, rgba(255,80,190,0.16), transparent 70%)' }, 0.3);
+            const p = 46 * vmin;
+            layer(el, { inset: 'auto', left: `calc(68% - ${p / 2}px)`, top: `calc(76% - ${p / 2}px)`, width: `${p}px`, height: `${p}px`, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #c7a2ff, #5b2a8a 55%, #12062a 80%)', boxShadow: '0 0 8vmin 1vmin rgba(150,110,255,0.35)' }, 0.7);
+          },
+          ember(el, r) {
+            layer(el, { background: 'linear-gradient(180deg,#0a0302 0%,#2a0805 55%,#5a1608 85%,#8a2a0a 100%)' }, 0);
+            layer(el, { background: 'radial-gradient(ellipse 90% 40% at 50% 105%, rgba(255,170,60,0.45), transparent 70%)' }, 0.3);
+            dots(el, r, 34, '#ffb347', [0.15, 0.35], [0.35, 1], 0.7);
+          },
+          storm(el, r) {
+            layer(el, { background: 'linear-gradient(180deg,#05070c 0%,#141c2b 50%,#0a0e16 100%)' }, 0);
+            const clouds = [];
+            for (let i = 0; i < 6; i += 1) clouds.push(`radial-gradient(ellipse ${30 + r() * 30}% ${12 + r() * 12}% at ${r() * 100}% ${10 + r() * 45}%, rgba(120,140,170,0.26), transparent 70%)`);
+            layer(el, { background: clouds.join(','), filter: 'blur(1vmin)' }, 0.4);
+            layer(el, { background: 'radial-gradient(ellipse 60% 25% at 50% 30%, rgba(143,216,255,0.12), transparent 70%)' }, 0.6);
+          },
+        };
+
+        cinematic.scenes.forEach((s, i) => {
+          const sceneEl = document.createElement('div');
+          sceneEl.className = 'scene';
+          const inner = document.createElement('div');
+          inner.className = 'scene-layer';
+          sceneEl.appendChild(inner);
+          scenesEl.appendChild(sceneEl);
+          const r = rng(s.seed);
+          const isImage = Boolean(s.file);
+          if (isImage) {
+            const img = document.createElement('img');
+            img.src = s.file;
+            img.alt = '';
+            inner.appendChild(img);
+          } else (ATMOSPHERES[s.atmosphere] ?? ATMOSPHERES.ocean)(inner, r);
+
+          const start = s.startMs / 1000;
+          const end = Math.min(duration, s.endMs / 1000);
+          const next = cinematic.scenes[i + 1];
+          const half = sceneTransition / 2;
+          const inAt = i === 0 || start === 0 ? 0 : Math.max(0, start - half);
+          // Visível até a próxima cena cobrir; com lacuna (manual), some com dissolve.
+          const covered = next && Math.abs(next.startMs - s.endMs) < 2;
+          const outAt = covered ? Math.min(duration, end + half) : end;
+          if (sceneTransition > 0 && inAt > 0) tl.fromTo(sceneEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: sceneTransition, ease: 'sine.inOut' }, inAt);
+          else tl.set(sceneEl, { autoAlpha: 1 }, inAt);
+          if (outAt < duration) {
+            if (covered || sceneTransition === 0) tl.set(sceneEl, { autoAlpha: 0 }, outAt);
+            else tl.to(sceneEl, { autoAlpha: 0, duration: Math.min(sceneTransition, Math.max(0.05, end - inAt)), ease: 'sine.inOut' }, Math.max(inAt, end - sceneTransition));
+          }
+
+          // Movimento lento de câmera ao longo da cena (não reativo; desliga com movimento reduzido).
+          const span = Math.max(0.1, outAt - inAt);
+          const dir = i % 2 === 0 ? 1 : -1;
+          const kind = motion === 'parallax_if_available' && isImage ? 'slow_zoom' : motion;
+          if (kind === 'slow_zoom') tl.fromTo(inner, { scale: dir > 0 ? 1.03 : 1.11 }, { scale: dir > 0 ? 1.11 : 1.03, duration: span, ease: 'none' }, inAt);
+          else if (kind === 'pan') tl.fromTo(inner, { scale: 1.1, xPercent: -2.5 * dir }, { scale: 1.1, xPercent: 2.5 * dir, duration: span, ease: 'none' }, inAt);
+          else if (kind === 'parallax_if_available') {
+            tl.fromTo(inner, { scale: 1.06 }, { scale: 1.1, duration: span, ease: 'none' }, inAt);
+            inner.querySelectorAll('.depth').forEach((d) => {
+              const depth = Number(d.dataset.depth);
+              if (depth > 0) tl.fromTo(d, { xPercent: -2.4 * depth * dir }, { xPercent: 2.4 * depth * dir, duration: span, ease: 'none' }, inAt);
+            });
+          } else gsap.set(inner, { scale: 1.04 });
+        });
+
+        // Vinheta/gradiente atrás da região do texto: legibilidade sem tarja opaca.
+        const k = vars.contrastOverlayStrength / 100;
+        const textY = ((safe.top + anchor * (1 - safe.top - safe.bottom)) * 100).toFixed(1);
+        document.getElementById('vignette').style.background =
+          `radial-gradient(ellipse 90% 34% at 50% ${textY}%, rgba(0,0,0,${(0.5 * k).toFixed(3)}), rgba(0,0,0,${(0.2 * k).toFixed(3)}) 55%, transparent 80%), ` +
+          `radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(0,0,0,${(0.7 * k).toFixed(3)}) 100%)`;
+
+        // Fragmentos da letra: 1–3 linhas, palavra de destaque maior e em linha própria.
+        const baseFont = (portrait ? 10 : 8.2) * vmin * vars.fontScale;
+        const emScale = vars.emphasisScale;
+        const groups = cinematic.groups.map((g) => {
+          const el = document.createElement('div');
+          el.className = 'group';
+          const spans = [];
+          let wi = 0;
+          g.rows.forEach((count) => {
+            const row = document.createElement('div');
+            row.className = 'row';
+            for (let c = 0; c < count; c += 1) {
+              const w = g.words[wi++];
+              const span = document.createElement('span');
+              span.className = w.emphasis ? 'cw em' : 'cw';
+              span.textContent = w.text;
+              row.appendChild(span);
+              spans.push(span);
+              if (c < count - 1) row.appendChild(document.createTextNode(' '));
+            }
+            el.appendChild(row);
+          });
+          stage.appendChild(el);
+          return { ...g, el, spans };
+        });
+        groups.forEach((g) => {
+          // Encolhe o fragmento inteiro (mantendo a proporção do destaque) até caber na área segura.
+          let s = 1;
+          // Tamanho no fragmento (os espaços entre palavras acompanham) e destaque em `em`.
+          g.spans.forEach((span, j) => (span.style.fontSize = g.words[j].emphasis ? `${emScale}em` : '1em'));
+          const apply = () => (g.el.style.fontSize = `${baseFont * s}px`);
+          const tooBig = () => Math.max(...[...g.el.children].map((row) => row.offsetWidth)) > boxW * 0.94 || g.el.offsetHeight > boxH * 0.55;
+          apply();
+          for (let i = 0; i < 40 && tooBig(); i += 1) {
+            s *= 0.94;
+            apply();
+          }
+          g.el.style.top = `${Math.max(0, Math.min(boxH - g.el.offsetHeight, anchor * boxH - g.el.offsetHeight / 2))}px`;
+        });
+
+        const tf = vars.textTransitionFrames / fpsNum;
+        const hold = 0.45;
+        const transition = reduced ? 'fade' : vars.textTransition;
+        const fromFor = (em) => {
+          const base = { autoAlpha: 0 };
+          if (transition === 'scale') Object.assign(base, { scale: em ? 0.7 : 0.82 });
+          else if (transition === 'slide') Object.assign(base, { y: 1.8 * vmin });
+          else if (transition === 'blur') Object.assign(base, { filter: `blur(${(1.1 * vmin).toFixed(1)}px)`, scale: em ? 0.86 : 1 });
+          else if (em && !reduced) Object.assign(base, { scale: 0.88 });
+          return base;
+        };
+        const away = transition === 'scale' ? { scale: 1.04 } : transition === 'slide' ? { y: -1.4 * vmin } : transition === 'blur' ? { filter: `blur(${(0.9 * vmin).toFixed(1)}px)` } : {};
+        groups.forEach((g, i) => {
+          const next = groups[i + 1];
+          const start = g.startMs / 1000;
+          let end = Math.min(duration, g.endMs / 1000 + hold);
+          // Um fragmento por vez: sai antes do próximo entrar; pausa longa deixa só o cenário.
+          if (next) end = Math.min(end, Math.max(start + 0.05, next.startMs / 1000 - 0.001));
+          tl.set(g.el, { autoAlpha: 1 }, at(g.startMs));
+          let lastReveal = start;
+          g.spans.forEach((span, j) => {
+            const w = g.words[j];
+            const wStart = g.timed ? w.startMs : g.startMs;
+            // Transição curta: nunca maior que a própria palavra (canto rápido).
+            const dur = Math.max(1 / fpsNum, Math.min(tf, g.timed ? (w.endMs - w.startMs) / 1000 : tf));
+            tl.fromTo(span, fromFor(w.emphasis), { autoAlpha: 1, scale: 1, y: 0, filter: 'blur(0px)', duration: dur, ease: w.emphasis ? 'power3.out' : 'power2.out' }, at(wStart));
+            // Palavra ativa pelos tempos validados, nunca pela batida (RF-031).
+            if (g.timed) {
+              tl.set(span, { attr: { 'data-s': 'active' } }, at(w.startMs));
+              tl.set(span, { attr: { 'data-s': 'sung' } }, at(w.endMs));
+            }
+            lastReveal = Math.max(lastReveal, wStart / 1000 + dur);
+          });
+          if (end < duration) {
+            const outDur = Math.max(0.04, Math.min(0.3, tf * 1.2, end - lastReveal));
+            tl.fromTo(g.el, { autoAlpha: 1, scale: 1, y: 0, filter: 'blur(0px)' }, { autoAlpha: 0, ...away, duration: outDur, ease: 'power1.in', immediateRender: false }, Math.max(start, end - outDur));
+          }
+        });
+      }
 
       // ---------------------------------------------------------- reatividade
-      const F = data.features;
-      const n = F.rms.length;
-      // Suavização causal por vínculo, pré-calculada (o mesmo valor em qualquer seek).
-      function series(source, smoothing) {
-        const raw = source === 'onset' || source === 'beat' ? null : F[source];
-        if (!raw) return null;
-        const out = new Float32Array(n);
-        let acc = raw[0] || 0;
-        for (let i = 0; i < n; i += 1) {
-          acc = smoothing * acc + (1 - smoothing) * raw[i];
-          out[i] = acc;
-        }
-        return out;
-      }
-      const sample = (arr, ms) => {
-        const pos = Math.max(0, ms) / F.sampleIntervalMs;
-        const i = Math.floor(pos);
-        if (i >= arr.length - 1) return arr[arr.length - 1] || 0;
-        return arr[i] + (arr[i + 1] - arr[i]) * (pos - i);
-      };
-      // Eventos (onset/batida) acima do limiar, espaçados por minEventGapMs.
-      function events(source, threshold) {
-        const list = source === 'onset' ? data.onsets : data.beatTimesMs.map((t) => ({ timeMs: t, strength: 1 }));
-        const out = [];
-        let last = -Infinity;
-        for (const e of list) {
-          if (e.strength < threshold || e.timeMs - last < minEventGapMs) continue;
-          out.push(e);
-          last = e.timeMs;
-        }
-        return out;
-      }
-      function lastBefore(list, ms) {
-        let lo = 0;
-        let hi = list.length - 1;
-        let ans = -1;
-        while (lo <= hi) {
-          const mid = (lo + hi) >> 1;
-          if (list[mid].timeMs <= ms) {
-            ans = mid;
-            lo = mid + 1;
-          } else hi = mid - 1;
-        }
-        return ans;
-      }
-      function sectionGain(ms) {
-        const s = data.sections.find((x) => ms >= x.startMs && ms < x.endMs);
-        if (!s || preset === 'minimal') return 1;
-        return s.type === 'chorus' ? 1.25 : s.type === 'verse' ? 0.8 : 1;
-      }
-
-      const limits = {
-        neon: { scale: 0.08, glow: 1.6, shake: 0 },
-        minimal: { scale: 0.03, glow: 0, shake: 0 },
-        glitch_rock: { scale: 0.12, glow: 1, shake: 1.6 },
-      }[preset];
-      const bindings = data.bindings
-        .filter((b) => b.enabled && k > 0)
-        .filter((b) => !(reduced && (b.target === 'scale' || b.target === 'position' || b.target === 'particles')))
-        .map((b, i) => ({ ...b, values: series(b.source, b.smoothing), events: series(b.source, 0) ? null : events(b.source, b.threshold), seed: 1000 + i }));
-
-      const decayMs = 160;
-      function bindingValue(b, ms) {
-        let v;
-        let ev = null;
-        if (b.values) v = sample(b.values, ms);
-        else {
-          const idx = lastBefore(b.events, ms);
-          if (idx < 0) return { v: 0, ev: -1 };
-          ev = idx;
-          v = b.events[idx].strength * Math.exp(-(ms - b.events[idx].timeMs) / decayMs);
-        }
-        if (b.values && v < b.threshold) v = 0;
-        else if (b.values) v = (v - b.threshold) / (1 - b.threshold || 1);
-        return { v: Math.min(b.clamp, v * b.gain), ev };
-      }
-
+      // Valores por frame calculados em @editor-video/domain (computeReactiveFrames):
+      // aqui só se lê o frame do instante pedido, então qualquer seek dá o mesmo resultado.
+      const R = data.reactive;
+      const lastFrame = Math.max(0, data.frameCount - 1);
       const bg = document.getElementById('bg');
+      const bgwrap = document.getElementById('bgwrap');
       const fx = document.getElementById('fx');
       const proxy = { t: 0 };
       function applyReactive() {
-        const ms = proxy.t * 1000;
-        const g = k * sectionGain(ms);
-        let scale = 1;
-        let glow = 0;
-        let bgOpacity = 1;
-        let dx = 0;
-        let dy = 0;
-        let split = 0;
-        for (const b of bindings) {
-          const { v, ev } = bindingValue(b, ms);
-          if (b.target === 'scale') scale += v * limits.scale * g;
-          else if (b.target === 'glow') glow += v * limits.glow * g * (reduced ? 0.5 : 1);
-          else if (b.target === 'opacity') bgOpacity = Math.min(bgOpacity, 1 - g * 0.65 * (1 - v));
-          else if (b.target === 'position' && ev >= 0) {
-            const r = rng(b.seed * 7919 + ev);
-            dx += (r() * 2 - 1) * v * limits.shake * g * vmin;
-            dy += (r() * 2 - 1) * v * limits.shake * 0.5 * g * vmin;
-            split += v * 0.6 * g;
-          }
-        }
-        stage.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px) scale(${scale.toFixed(4)})`;
-        stage.style.setProperty('--glow', glow.toFixed(3));
-        stage.style.setProperty('--split', Math.min(0.8, split).toFixed(3));
-        bg.style.opacity = Math.max(0.15, bgOpacity).toFixed(3);
+        const f = Math.min(lastFrame, Math.max(0, Math.round(proxy.t * fpsNum)));
+        stage.style.transform = `translate(${(R.dx[f] * vmin).toFixed(2)}px, ${(R.dy[f] * vmin).toFixed(2)}px) scale(${R.scale[f]})`;
+        stage.style.setProperty('--glow', String(R.glow[f]));
+        stage.style.setProperty('--split', String(R.split[f]));
+        (cinematic ? scenesEl : bg).style.opacity = String(R.bgOpacity[f]);
+        // Microzoom e brilho do cenário (graves/agudos), com teto no domínio.
+        bgwrap.style.transform = R.bgScale[f] === 1 ? '' : `scale(${R.bgScale[f]})`;
+        bgwrap.style.filter = R.bgBright[f] === 0 ? '' : `brightness(${(1 + R.bgBright[f]).toFixed(4)})`;
       }
       tl.to(proxy, { t: duration, duration, ease: 'none', onUpdate: applyReactive }, 0);
       applyReactive();
 
-      // Partículas e barras de glitch: posições derivadas da semente e do índice do evento.
-      bindings.filter((b) => b.target === 'particles').forEach((b) => {
-        b.events.forEach((e, ei) => {
-          const r = rng(b.seed * 104729 + ei);
-          const count = 4 + Math.round(e.strength * 4 * k);
-          for (let p = 0; p < count; p += 1) {
-            const dot = document.createElement('div');
-            dot.className = 'particle';
-            const x = 0.1 + r() * 0.8;
-            const y = safe.top + r() * (1 - safe.top - safe.bottom);
-            dot.style.left = `${x * 100}%`;
-            dot.style.top = `${y * 100}%`;
-            fx.appendChild(dot);
-            const at = e.timeMs / 1000;
-            if (at >= duration) continue;
-            tl.fromTo(dot, { opacity: 0, scale: 0.4, x: 0, y: 0 }, { opacity: 0.85 * k, scale: 1, duration: 0.06, ease: 'none' }, at);
-            tl.to(dot, { opacity: 0, x: (r() * 2 - 1) * 6 * vmin, y: -(2 + r() * 6) * vmin, scale: 0.2, duration: 0.7, ease: 'power2.out' }, at + 0.06);
-          }
-        });
+      // Partículas e barras de glitch: posições derivadas da semente de cada evento.
+      data.particles.forEach((e) => {
+        const r = rng(e.seed);
+        const at = e.frame / fpsNum;
+        if (at >= duration) return;
+        const count = cinematic ? 3 + Math.round(e.strength * 3) : 4 + Math.round(e.strength * 4);
+        for (let p = 0; p < count; p += 1) {
+          const dot = document.createElement('div');
+          dot.className = 'particle';
+          dot.style.left = `${(0.1 + r() * 0.8) * 100}%`;
+          dot.style.top = `${(safe.top + r() * (1 - safe.top - safe.bottom)) * 100}%`;
+          fx.appendChild(dot);
+          tl.fromTo(dot, { opacity: 0, scale: 0.4, x: 0, y: 0 }, { opacity: 0.85 * Math.min(1, e.strength), scale: 1, duration: 0.06, ease: 'none' }, at);
+          tl.to(dot, { opacity: 0, x: (r() * 2 - 1) * 6 * vmin, y: -(2 + r() * 6) * vmin, scale: 0.2, duration: 0.7, ease: 'power2.out' }, at + 0.06);
+        }
       });
-      if (preset === 'glitch_rock' && !reduced) {
-        bindings.filter((b) => b.target === 'position').forEach((b) => {
-          b.events.forEach((e, ei) => {
-            const r = rng(b.seed * 15485863 + ei);
-            const at = e.timeMs / 1000;
-            if (at >= duration) return;
-            for (let i = 0; i < 2; i += 1) {
-              const bar = document.createElement('div');
-              bar.className = 'bar';
-              bar.style.top = `${(safe.top + r() * (1 - safe.top - safe.bottom)) * 100}%`;
-              bar.style.height = `${(0.4 + r() * 1.6) * vmin}px`;
-              fx.appendChild(bar);
-              const peak = (vars.limitFlashes ? 0.45 : 0.8) * e.strength * k;
-              tl.fromTo(bar, { opacity: 0, x: 0 }, { opacity: peak, x: (r() * 2 - 1) * 4 * vmin, duration: 0.03, ease: 'none' }, at);
-              tl.to(bar, { opacity: 0, duration: 0.09, ease: 'none' }, at + 0.03);
-            }
-          });
-        });
-      }
+      data.glitches.forEach((e) => {
+        const r = rng(e.seed);
+        const at = e.frame / fpsNum;
+        if (at >= duration) return;
+        for (let i = 0; i < 2; i += 1) {
+          const bar = document.createElement('div');
+          bar.className = 'bar';
+          bar.style.top = `${(safe.top + r() * (1 - safe.top - safe.bottom)) * 100}%`;
+          bar.style.height = `${(0.4 + r() * 1.6) * vmin}px`;
+          fx.appendChild(bar);
+          const peak = (vars.limitFlashes ? 0.45 : 0.8) * Math.min(1, e.strength);
+          tl.fromTo(bar, { opacity: 0, x: 0 }, { opacity: peak, x: (r() * 2 - 1) * 4 * vmin, duration: 0.03, ease: 'none' }, at);
+          tl.to(bar, { opacity: 0, duration: 0.09, ease: 'none' }, at + 0.03);
+        }
+      });
 
       // Fundo: deriva lenta e determinística; progresso da faixa no Minimal.
-      if (!reduced && preset !== 'minimal') tl.to(bg, { xPercent: 3, yPercent: -2, duration, ease: 'sine.inOut' }, 0);
+      if (!reduced && preset !== 'minimal' && !cinematic) tl.to(bg, { xPercent: 3, yPercent: -2, duration, ease: 'sine.inOut' }, 0);
       if (preset === 'minimal') tl.fromTo(progress, { scaleX: 0 }, { scaleX: 1, duration, ease: 'none' }, 0);
       if (!vars.credit) credit.style.display = 'none';
       else tl.from(credit, { opacity: 0, duration: 0.6 }, 0.2);

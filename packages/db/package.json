@@ -36,7 +36,8 @@
     "@editor-video/domain": "*",
     "@editor-video/timeline": "*",
     "bullmq": "^5.34.10",
-    "@editor-video/integrations": "*"
+    "@editor-video/integrations": "*",
+    "@editor-video/templates": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

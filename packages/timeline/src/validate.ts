@@ -24,6 +24,7 @@ export type ValidationIssue = {
     | 'TRACK_KIND'
     | 'OVERLAP'
     | 'CAPTION_WORDS'
+    | 'LYRIC_META'
     | 'DURATION_TOTAL'
     | 'VARIANT_REF';
   message: string;
@@ -132,6 +133,17 @@ export function validateSemantics(doc: TimelineDocument): ValidationIssue[] {
         }
       }
 
+      if (item.kind === 'caption' && Boolean(item.lyric) !== (track.role === 'lyrics')) {
+        issues.push({
+          code: 'LYRIC_META',
+          message: track.role === 'lyrics' ? `Linha ${item.id} sem estado de letra` : `Item ${item.id} com estado de letra fora de trilha de letra`,
+          path,
+        });
+      }
+      if (track.role === 'lyrics' && track.type !== 'caption') {
+        issues.push({ code: 'TRACK_KIND', message: `Trilha de letra ${track.id} precisa ser do tipo caption`, path: `tracks.${ti}` });
+      }
+
       if (item.kind === 'caption') {
         for (const word of item.words) {
           if (word.start >= word.end || word.start < item.timelineStart || word.end > itemEnd(item)) {
@@ -146,7 +158,8 @@ export function validateSemantics(doc: TimelineDocument): ValidationIssue[] {
       }
     });
 
-    for (let i = 1; i < sorted.length; i += 1) {
+    // Na letra, linhas sobrepostas são canto sobreposto (a composição usa uma segunda faixa).
+    for (let i = 1; i < (track.role === 'lyrics' ? 0 : sorted.length); i += 1) {
       const prev = sorted[i - 1]!;
       const curr = sorted[i]!;
       const a = { start: prev.timelineStart, end: itemEnd(prev) };

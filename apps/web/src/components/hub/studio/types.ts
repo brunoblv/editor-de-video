@@ -10,6 +10,8 @@ export type ProjectPayload = {
   currentRevisionId: string | null;
   channel: { id: string; name: string; slug: string };
   currentRevision: { number: number } | null;
+  /** Presente em projetos Reactive Lyrics. */
+  lyrics?: { id: string } | null;
   timeline: TimelineDocument | null;
 };
 

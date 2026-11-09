@@ -113,28 +113,6 @@ export type LyricLine = z.infer<typeof lyricLineSchema>;
 export type LyricAlignment = z.infer<typeof lyricAlignmentSchema>;
 
 // ---------------------------------------------------------------------------
-// Vínculos de efeito (ArtisticPlan §6.3, RF-032/RF-036)
-// ---------------------------------------------------------------------------
-
-export const EFFECT_SOURCES = ['bass', 'mids', 'treble', 'rms', 'onset', 'beat'] as const;
-export const EFFECT_TARGETS = ['scale', 'glow', 'opacity', 'position', 'particles'] as const;
-
-export const effectBindingSchema = z.object({
-  source: z.enum(EFFECT_SOURCES),
-  target: z.enum(EFFECT_TARGETS),
-  /** Valores da fonte abaixo do limiar não acionam o efeito. */
-  threshold: unit.default(0),
-  gain: z.number().min(0).max(4).default(1),
-  /** 0 = sem suavização; perto de 1 = resposta lenta. */
-  smoothing: z.number().min(0).max(0.98).default(0),
-  /** Teto da resposta normalizada, antes da escala própria do alvo. */
-  clamp: unit.default(1),
-  enabled: z.boolean().default(true),
-});
-
-export type EffectBinding = z.infer<typeof effectBindingSchema>;
-
-// ---------------------------------------------------------------------------
 // Importação de letra (RF-009)
 // ---------------------------------------------------------------------------
 
@@ -462,4 +440,75 @@ export function sliceForSegment(
         words: l.words ? l.words.map((w) => ({ ...w, startMs: clip(w.startMs), endMs: clip(w.endMs) })) : null,
       })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Letra transcrita (Whisper)
+// ---------------------------------------------------------------------------
+
+export type TranscribedSegment = {
+  text: string;
+  startSec: number;
+  endSec: number;
+  words: Array<{ text: string; startSec: number; endSec: number; confidence?: number }>;
+};
+
+/** Linha transcrita com no máximo este número de palavras; acima disso divide na maior pausa. */
+const MAX_WORDS_PER_LINE = 9;
+
+/**
+ * Segmentos do Whisper → linhas de letra com tempo por palavra e origem
+ * `asr`. Nunca entram validadas: palavra com confiança < 0,6 marca a linha
+ * como LOW_CONFIDENCE; as demais ficam SUGGESTED (RF-015). `offsetSec` soma
+ * ao tempo do segmento (ex.: início do trecho transcrito na música).
+ */
+export function transcriptToLyricLines(segments: TranscribedSegment[], offsetSec = 0): LyricLine[] {
+  type W = { text: string; startMs: number; endMs: number; confidence: number | null };
+  const groups: W[][] = [];
+  const split = (words: W[]) => {
+    if (words.length <= MAX_WORDS_PER_LINE) {
+      if (words.length) groups.push(words);
+      return;
+    }
+    let cut = Math.floor(words.length / 2);
+    let gap = -1;
+    for (let i = 2; i < words.length - 1; i += 1) {
+      const g = words[i]!.startMs - words[i - 1]!.endMs;
+      if (g > gap) {
+        gap = g;
+        cut = i;
+      }
+    }
+    split(words.slice(0, cut));
+    split(words.slice(cut));
+  };
+  for (const seg of segments) {
+    const words = seg.words
+      .map((w) => ({
+        text: w.text.trim(),
+        startMs: Math.max(0, Math.round((w.startSec + offsetSec) * 1000)),
+        endMs: Math.max(0, Math.round((w.endSec + offsetSec) * 1000)),
+        confidence: typeof w.confidence === 'number' ? Math.max(0, Math.min(1, w.confidence)) : null,
+      }))
+      .filter((w) => w.text);
+    // Palavra sem duração ganha 1 ms para não ficar invertida; o QA mostra a confiança.
+    for (const w of words) if (w.endMs <= w.startMs) w.endMs = w.startMs + 1;
+    if (words.length) split(words);
+    else if (seg.text.trim()) {
+      groups.push([{ text: seg.text.trim(), startMs: Math.round((seg.startSec + offsetSec) * 1000), endMs: Math.round((seg.endSec + offsetSec) * 1000), confidence: null }]);
+    }
+  }
+  return groups.map((words, i) => {
+    const low = words.some((w) => w.confidence !== null && w.confidence < LOW_CONFIDENCE);
+    return lyricLineSchema.parse({
+      id: `asr${i + 1}`,
+      text: words.map((w) => w.text).join(' '),
+      stanza: 0,
+      startMs: words[0]!.startMs,
+      endMs: Math.max(words[words.length - 1]!.endMs, words[0]!.startMs + 1),
+      status: low ? 'LOW_CONFIDENCE' : 'SUGGESTED',
+      source: 'aligner',
+      words: words.map((w, j) => ({ id: `asr${i + 1}-w${j + 1}`, text: w.text, startMs: w.startMs, endMs: w.endMs, confidence: w.confidence })),
+    });
+  });
 }

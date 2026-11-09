@@ -16,7 +16,11 @@ import type { PlannedText, RenderPlan } from '@editor-video/timeline/compile';
 import { runProcess, toolPaths, type ToolPaths } from './process.js';
 
 export type AssetResolver = (assetId: string, useProxy: boolean) => Promise<{ path: string; kind: string }>;
-export type CompositionResolver = (layerItemId: string) => Promise<string>;
+/**
+ * Arquivo da composição renderizada. `inSec` = quanto pular no início (a
+ * composição foi renderizada inteira e o plano usa só um trecho dela).
+ */
+export type CompositionResolver = (layerItemId: string) => Promise<string | { path: string; inSec: number }>;
 
 export type RenderOptions = {
   plan: RenderPlan;
@@ -134,8 +138,10 @@ export async function buildRenderCommand(options: RenderOptions): Promise<BuiltC
     let isStill = false;
     if (layer.kind === 'composition') {
       if (!options.resolveComposition) throw new Error(`Composição ${layer.itemId} sem resolvedor`);
-      file = await options.resolveComposition(layer.itemId);
-      inputs.push('-t', n(length), '-i', file);
+      const resolved = await options.resolveComposition(layer.itemId);
+      file = typeof resolved === 'string' ? resolved : resolved.path;
+      const inSec = typeof resolved === 'string' ? 0 : resolved.inSec;
+      inputs.push(...(inSec > 0 ? ['-ss', n(inSec)] : []), '-t', n(length), '-i', file);
     } else {
       const asset = await options.resolveAsset(layer.assetId!, layer.useProxy);
       file = asset.path;
